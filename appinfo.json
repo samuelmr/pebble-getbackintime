@@ -1,0 +1,37 @@
+{
+    "appKeys": {
+        "cmd": 1,
+        "dist": 3,
+        "head": 2,
+        "units": 4
+    },
+    "capabilities": [
+        "location",
+        "configurable"
+    ],
+    "companyName": "Samuel Rinnetm\u00e4ki",
+    "longName": "Get Back in Time",
+    "projectType": "native",
+    "resources": {
+        "media": [
+            {
+                "file": "images/icon28.png",
+                "menuIcon": true,
+                "name": "LOGO",
+                "type": "png"
+            }
+        ]
+    },
+    "sdkVersion": "3",
+    "shortName": "Get Back",
+    "targetPlatforms": [
+        "aplite",
+        "basalt"
+    ],
+    "uuid": "6f983a89-f645-4a11-aefd-3b84dd8946f0",
+    "versionCode": 1,
+    "versionLabel": "0.1",
+    "watchapp": {
+        "watchface": false
+    }
+}
