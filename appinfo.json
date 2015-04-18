@@ -3,7 +3,9 @@
         "cmd": 1,
         "dist": 3,
         "head": 2,
-        "units": 4
+        "units": 4,
+        "sens": 5,
+        "id": 6
     },
     "capabilities": [
         "location",
@@ -23,14 +25,14 @@
         ]
     },
     "sdkVersion": "3",
-    "shortName": "Get Back",
+    "shortName": "Back in Time",
     "targetPlatforms": [
         "aplite",
         "basalt"
     ],
     "uuid": "6f983a89-f645-4a11-aefd-3b84dd8946f0",
     "versionCode": 1,
-    "versionLabel": "0.1",
+    "versionLabel": "1.0",
     "watchapp": {
         "watchface": false
     }

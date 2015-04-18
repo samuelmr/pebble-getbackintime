@@ -1,24 +1,30 @@
 var initialized = false;
-var divider = 1000000;
 var interval;
 var lat1 = 0;
 var lon1 = 0;
 var lat2;
 var lon2;
+var prevHead = 0;
+var prevDist = 0;
 var head = 0;
 var dist = 0;
+var token;
 var units = "metric";
+var sens = 5;
 var R = 6371000; // m
 var locationWatcher;
 var locationInterval;
 var locationOptions = {timeout: 15000, maximumAge: 1000, enableHighAccuracy: true };
-var setPebbleToken = "DY3U";
+var setPebbleToken = "AF42";
+var serverAddress = 'http://getback.pebbletime.io/';
 
 Pebble.addEventListener("ready", function(e) {
   lat2 = parseFloat(localStorage.getItem("lat2")) || null;
   lon2 = parseFloat(localStorage.getItem("lon2")) || null;
   interval = parseInt(localStorage.getItem("interval")) || 0;
   units = localStorage.getItem("units") || "metric";
+  sens = parseInt(localStorage.getItem("sens")) || 5;
+  token = localStorage.getItem("token") || token;
   if ((lat2 === null) || (lon2 === null)) {
     storeCurrentPosition();
   }
@@ -28,6 +34,18 @@ Pebble.addEventListener("ready", function(e) {
   startWatcher();
   // console.log(e.type);
   initialized = true;
+  if (Pebble.getTimelineToken) {
+    Pebble.getTimelineToken(
+      function (timelineToken) {
+        token = timelineToken;
+        console.log('Got timeline token ' + token);
+        localStorage.setItem("token", token);
+      },
+      function (error) { 
+        console.log('Error getting timeline token: ' + error);
+      }
+    );
+  }
   console.log("JavaScript app ready and running! " + e.ready);
 });
 
@@ -37,7 +55,12 @@ Pebble.addEventListener("appmessage",
       console.log("Got command: " + e.payload.cmd);
       switch (e.payload.cmd) {
         case 'set':
-          storeCurrentPosition();
+          if (!e.payload.id || (e.payload.id < 0)) {
+            storeCurrentPosition();
+          }
+          else {
+            getPositionFromServer(e.payload.id);
+          }
           break;
         case 'clear':
           lat2 = null;
@@ -66,11 +89,17 @@ Pebble.addEventListener("webviewclosed",
     var options = JSON.parse(decodeURIComponent(e.response));
     console.log("Webview window returned: " + JSON.stringify(options));
     units = (options["1"] === 1) ? 'imperial' : 'metric';
-    console.log("Units set to: " + units);
     localStorage.setItem("units", units);
-    interval = options["2"] || 0;
-    console.log("Interval set to: " + interval);
+    console.log("Units set to: " + units);
+    interval = parseInt(options["2"]) || 0;
     localStorage.setItem("interval", interval);
+    console.log("Interval set to: " + interval);
+    sens = parseInt(options["3"]) || 5;
+    localStorage.setItem("sens", sens);
+    console.log("Sentitivity set to: " + sens);
+    msg = {"units": units,
+           "sens": parseInt(sens)};
+    sendMessage(msg);
     calculate();
     startWatcher();
   }
@@ -108,18 +137,7 @@ function storeLocation(position) {
 function calculate() {
   var msg;
   if (lat2 || lon2) {
-    if ((Math.round(lat2*divider) == Math.round(lat1*divider)) && 
-        (Math.round(lon2*divider) == Math.round(lon1*divider))) {
-      // console.log("Not moved yet, still at  " + lat1 + ',' + lon1);
-      dist = 0;
-      head = 0;
-      msg = {"dist": dist,
-             "head": head,
-             "units": units};
-      sendMessage(msg);
-      return;
-    }
-    console.log("Moved to  " + lat1 + ',' + lon1);
+    // console.log("Moved to  " + lat1 + ',' + lon1);
     if (!lat2) {
       lat2 = 0;
     }
@@ -146,10 +164,15 @@ function calculate() {
             Math.sin(l1)*Math.cos(l2)*Math.cos(dLon);
     head = toDeg(Math.round(Math.atan2(y, x)));
     // console.log("Calculated head " + head);
-    msg = {"dist": dist,
-           "head": head,
-           "units": units};
-    sendMessage(msg);
+    if ((dist != prevDist) || (head != prevHead)) {
+      msg = {"dist": dist,
+             "head": head,
+             "units": units,
+             "sens": parseInt(sens)};
+      sendMessage(msg);
+      prevDist = dist;
+      prevHead = head;
+    }
   }
   else {
     // console.log("Will not calculate: no lat2 and lon2: " + lat2 + ',' + lon2);
@@ -163,6 +186,24 @@ function locationError(error) {
 function storeCurrentPosition() {
   // console.log("Attempting to store current position.");
   navigator.geolocation.getCurrentPosition(storeLocation, locationError, locationOptions);
+}
+
+function getPositionFromServer(id) {
+  var url = serverAddress + token + '/' + id;
+  url = 'http://pebbletime.io/test.json';
+  var req = new XMLHttpRequest();
+  req.onload = parseServerResponse;
+  req.open("get", url, true);
+  req.send();  
+}
+
+function parseServerResponse(res) {
+  if (!res.position) {
+    console.warn('No position from server');
+    return false;
+  }
+  console.log('Got position from server: ' + res.position.latitude + ', ' + res.position.longitude);
+  storeLocation(res.position);
 }
 
 function startWatcher() {  
