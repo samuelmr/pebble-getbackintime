@@ -98,6 +98,7 @@ static void reset_handler(ClickRecognizerRef recognizer, void *context) {
     text_layer_destroy(hint_layer);
     hint_layer = NULL;
   }
+  text_layer_set_text(dist_layer, "0");
   send_message(set_cmd, -1); // current location
 }
 

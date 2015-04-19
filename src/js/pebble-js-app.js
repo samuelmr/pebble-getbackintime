@@ -185,6 +185,9 @@ function locationError(error) {
 
 function storeCurrentPosition() {
   // console.log("Attempting to store current position.");
+  var msg = {"dist": 0,
+             "head": 0};
+  sendMessage(msg);
   navigator.geolocation.getCurrentPosition(storeLocation, locationError, locationOptions);
 }
 
