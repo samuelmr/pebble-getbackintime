@@ -288,9 +288,10 @@ static void window_unload(Window *window) {
 static void init(void) {
   #ifdef APP_LAUNCH_TIMELINE_ACTION
     // if launched from timeline, set target to given id
-    if(launch_reason() == APP_LAUNCH_TIMELINE_ACTION) {
+    if(launch_reason() == APP_LAUNCH_TIMELINE_ACTION) {      
       uint32_t id = launch_get_args();
       send_message(set_cmd, (int32_t) id);
+      APP_LOG(APP_LOG_LEVEL_WARNING, "Launched from timeline, pin ID: %lu", id);
     }
   #endif
   compass_service_set_heading_filter(TRIG_MAX_ANGLE*sensitivity/360);
