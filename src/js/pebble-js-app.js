@@ -15,7 +15,6 @@ var R = 6371000; // m
 var locationWatcher;
 var locationInterval;
 var locationOptions = {timeout: 15000, maximumAge: 1000, enableHighAccuracy: true };
-var setPebbleToken = "AF42";
 var serverAddress = 'http://getback.pebbletime.io/';
 
 Pebble.addEventListener("ready", function(e) {
@@ -32,8 +31,6 @@ Pebble.addEventListener("ready", function(e) {
     // console.log("Target location known:" + lon2 + ',' + lat2);
   }
   startWatcher();
-  // console.log(e.type);
-  initialized = true;
   if (Pebble.getTimelineToken) {
     Pebble.getTimelineToken(
       function (timelineToken) {
@@ -47,6 +44,7 @@ Pebble.addEventListener("ready", function(e) {
     );
   }
   console.log("JavaScript app ready and running! " + e.ready);
+  initialized = true;
 });
 
 Pebble.addEventListener("appmessage",
@@ -78,7 +76,7 @@ Pebble.addEventListener("appmessage",
 
 Pebble.addEventListener("showConfiguration",
   function() {
-    var uri = "http://x.setpebble.com/" + setPebbleToken + "/" + Pebble.getAccountToken();
+    var uri = serverAddress + token + '/configure';
     console.log("Configuration url: " + uri);
     Pebble.openURL(uri);
   }
@@ -97,8 +95,8 @@ Pebble.addEventListener("webviewclosed",
     sens = parseInt(options["3"]) || 5;
     localStorage.setItem("sens", sens);
     console.log("Sentitivity set to: " + sens);
-    msg = {"units": units,
-           "sens": parseInt(sens)};
+    var msg = {"units": units,
+               "sens": parseInt(sens)};
     sendMessage(msg);
     calculate();
     startWatcher();
@@ -125,6 +123,19 @@ function locationSuccess(position) {
   calculate();
 }
 
+function addLocation(position) {
+  storeLocation(position);
+  // add place to server
+  var obj = {position: position};
+  var url = serverAddress + token + '/place/new';
+  var req = new XMLHttpRequest();
+  req.onload = function(res) {
+    console.log(res);
+  };
+  req.open("post", url, true);
+  req.send(obj);
+}
+
 function storeLocation(position) {
   lat2 = position.coords.latitude;
   lon2 = position.coords.longitude;
@@ -137,33 +148,24 @@ function storeLocation(position) {
 function calculate() {
   var msg;
   if (lat2 || lon2) {
-    // console.log("Moved to  " + lat1 + ',' + lon1);
     if (!lat2) {
       lat2 = 0;
     }
     if (!lon2) {
       lon2 = 0;
     }
-    // console.log("Found stored point " + lat2 + ',' + lon2);
     var dLat = toRad(lat2-lat1);
-    // console.log("Latitude difference (radians): " + dLat);
     var dLon = toRad(lon2-lon1);
-    // console.log("Longitude difference (radians): " + dLon);
     var l1 = toRad(lat1);
     var l2 = toRad(lat2);
-    // console.log("current and stored latitudes in radians: " + l1 + ',' + l2);
-
     var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
             Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(l1) * Math.cos(l2); 
     var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
     dist = Math.round(R * c);
-    // console.log("Calculated dist " + dist);
-    
     var y = Math.sin(dLon) * Math.cos(l2);
     var x = Math.cos(l1)*Math.sin(l2) -
             Math.sin(l1)*Math.cos(l2)*Math.cos(dLon);
     head = toDeg(Math.round(Math.atan2(y, x)));
-    // console.log("Calculated head " + head);
     if ((dist != prevDist) || (head != prevHead)) {
       msg = {"dist": dist,
              "head": head,
@@ -173,9 +175,6 @@ function calculate() {
       prevDist = dist;
       prevHead = head;
     }
-  }
-  else {
-    // console.log("Will not calculate: no lat2 and lon2: " + lat2 + ',' + lon2);
   }
 }
 
@@ -188,12 +187,11 @@ function storeCurrentPosition() {
   var msg = {"dist": 0,
              "head": 0};
   sendMessage(msg);
-  navigator.geolocation.getCurrentPosition(storeLocation, locationError, locationOptions);
+  navigator.geolocation.getCurrentPosition(addLocation, locationError, locationOptions);
 }
 
 function getPositionFromServer(id) {
-  var url = serverAddress + token + '/' + id;
-  url = 'http://pebbletime.io/test.json';
+  var url = serverAddress + token + '/place/' + id;
   var req = new XMLHttpRequest();
   req.onload = parseServerResponse;
   req.open("get", url, true);

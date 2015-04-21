@@ -1,0 +1,16 @@
+{
+  "name": "GetBackServer",
+  "version": "1.0.0",
+  "description": "Server component for Pebble watch app Get Back in Time",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "Samuel Rinnetm\u00e4ki",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.12.3",
+    "pebble-api": "^0.1.1"
+  }
+}
