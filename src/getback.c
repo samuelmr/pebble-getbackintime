@@ -144,6 +144,7 @@ void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, voi
 
 void in_received_handler(DictionaryIterator *iter, void *context) {
   // incoming message received
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Got message from phone!");
   static char units[9];
   Tuple *head_tuple = dict_find(iter, HEAD_KEY);
   if (head_tuple) {
@@ -183,7 +184,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     compass_service_set_heading_filter(TRIG_MAX_ANGLE*sensitivity/360);
     compass_service_unsubscribe();
     compass_service_subscribe(&compass_heading_handler);
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Sensitivity: %d", sensitivity);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Sensitivity: %d", sensitivity);
   }
   static char dist_text[9];
   snprintf(dist_text, sizeof(dist_text), "%d", (int) distance);
