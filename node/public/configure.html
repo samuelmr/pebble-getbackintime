@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Configure</title>
+<meta content="True" name="HandheldFriendly">
+<meta content="yes" name="apple-mobile-web-app-capable">
+<meta content="width" name="MobileOptimized">
+<meta content="width=device-width,initial-scale=1" name="viewport">
+<link href="https://fonts.googleapis.com/css?family=Coda" rel="stylesheet" type="text/css">
+<style type="text/css">
+ body {
+ }
+ h1 {
+  text-align: center;
+ }
+ form {
+  margin: 0 auto;
+  width: 40em;
+ }
+ fieldset {
+ }
+ legend {
+  font-weight: 800;
+ }
+ p {
+  margin: 0 0 1em 0;
+  font-style: italic;
+ }
+ label {
+  display: block;
+  float: left;
+  width: 12em;
+ }
+ input {
+ }
+ 
+</style>
+</head>
+<body>
+<h1>Get Back in Time</h1>
+<form method="get" action="pebblejs://close">
+<fieldset>
+<legend>Units</legend>
+<p>Show distance in meters/kilometers or yards/miles?</p>
+<label><input type="radio" name="units" value="metric" id="metric" checked="checked" /> Metric (m, km)</label>
+<label><input type="radio" name="units" value="imperial" id="imperial" /> Imperial (y, mi)</label>
+</fieldset>
+<fieldset>
+<legend>Update interval</legend>
+<p>How often location should be checked? (More often consumes more battery.)</p>
+<select name="interval">
+<option value="0">Automatic</option>
+<option value="1">Once a second</option>
+<option value="2">Every 2 seconds</option>
+<option value="5">Every 5 seconds</option>
+<option value="10">Every 10 seconds</option>
+<option value="30">Every 30 seconds</option>
+<option value="60">Once a minute</option>
+</select>
+</fieldset>
+<fieldset>
+<legend>Compass sensitivity</legend>
+<p>How fast the app should react to changes in compass heading?</p>
+<label><input type="radio" name="sens" value="1" id="fast" /> Fast</label>
+<label><input type="radio" name="sens" value="5" id="normal" checked="checked" /> Normal</label>
+<label><input type="radio" name="sens" value="10" id="slow" /> Slow</label>
+</fieldset>
+<input type="submit" value="Save configuration" />
+</form>
+<script type="text/javascript">
+ var f = document.forms[0];
+ f.onsubmit = sendConfig;
+ var conf;
+ if (document.location.hash) {
+  var json = decodeURIComponent(document.location.hash.substr(1));
+  if (json && (json.charAt(0) == '[')) {
+   conf = JSON.parse(json);
+  }
+  else {
+   console.log('Invalid config ' + json);
+  }
+  if (conf) {
+   if (conf.units == 'imperial') {
+    document.getElementById('imperial').checked = true;
+   }
+   for (var i=0; i<f.interval.options.length; i++) {
+    var opt = f.interval.options[i];
+    if (opt.value == conf.interval) {
+     opt.checked = true;
+    }
+   }
+   if (conf.sens == 'fast') {
+    document.getElementById('fast').checked = true;
+   }
+   else if (conf.sens == 'slow') {
+    document.getElementById('slow').checked = true;
+   }
+  }
+ }
+ function getQueryParam(variable, default_) {
+  var query = location.search.substring(1);
+  // work around CloudPebble issue #124
+  if (location.hash) {
+   query += location.hash.substr(location.hash.indexOf('?')+1);
+  }
+  var vars = query.split('&');
+  for (var i=vars.length-1; i>=0; i--) {
+   var pair = vars[i].split('=');
+   if (pair[0] == variable) {
+    return decodeURIComponent(pair[1]);
+   }
+  }
+  return default_ || false;
+ }
+ function sendConfig(e) {
+  e.preventDefault();
+  var config = {
+    units: f.units.value,
+    interval: f.interval.value,
+    sens: f.sens.value
+  };
+  console.log(config);
+  var return_to = getQueryParam('return_to', 'pebblejs://close#');
+  location.href = return_to + encodeURIComponent(JSON.stringify(config));
+  return false;
+ }
+</script>
+</body>
+</html>

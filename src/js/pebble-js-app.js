@@ -8,7 +8,7 @@ var prevHead = 0;
 var prevDist = 0;
 var head = 0;
 var dist = 0;
-var token;
+var token = '-';
 var units = "metric";
 var sens = 5;
 var R = 6371000; // m
@@ -43,7 +43,7 @@ Pebble.addEventListener("ready", function(e) {
       }
     );
   }
-  console.log("JavaScript app ready and running! " + e.ready);
+  console.log("JavaScript app ready and running!");
   initialized = true;
 });
 
@@ -84,15 +84,16 @@ Pebble.addEventListener("showConfiguration",
 
 Pebble.addEventListener("webviewclosed",
   function(e) {
+    console.log(e.response);
     var options = JSON.parse(decodeURIComponent(e.response));
     console.log("Webview window returned: " + JSON.stringify(options));
-    units = (options["1"] === 1) ? 'imperial' : 'metric';
+    units = (options["units"] === 1) ? 'imperial' : 'metric';
     localStorage.setItem("units", units);
     console.log("Units set to: " + units);
-    interval = parseInt(options["2"]) || 0;
+    interval = parseInt(options["interval"]) || 0;
     localStorage.setItem("interval", interval);
     console.log("Interval set to: " + interval);
-    sens = parseInt(options["3"]) || 5;
+    sens = parseInt(options["sens"]) || 5;
     localStorage.setItem("sens", sens);
     console.log("Sentitivity set to: " + sens);
     var msg = {"units": units,
@@ -233,8 +234,8 @@ function startWatcher() {
     lon1 = lon1 - Math.random()/100;
     calculate();
   }, 5000);
-  console.log("Started location watcher: " + locationWatcher);
   */
+  console.log("Started location watcher: " + locationWatcher);
 }
 function toRad(num) {
   return num * Math.PI / 180;  
