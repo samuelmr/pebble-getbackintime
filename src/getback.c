@@ -78,6 +78,18 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, GColorBlack);
 }
 
+static void show_hint(void) {
+  if (hint_layer) {
+    layer_set_hidden((Layer *) hint_layer, false);
+  }
+}
+
+static void hide_hint(void) {
+  if (hint_layer) {
+    layer_set_hidden((Layer *) hint_layer, true);
+  }
+}
+
 static void send_message(const char *cmd, int32_t id) {
   DictionaryIterator *iter;
   app_message_outbox_begin(&iter);
@@ -94,26 +106,17 @@ static void send_message(const char *cmd, int32_t id) {
 
 static void reset_handler(ClickRecognizerRef recognizer, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Reset");
-  if (hint_layer) {
-    text_layer_destroy(hint_layer);
-    hint_layer = NULL;
-  }
+  hide_hint();
   text_layer_set_text(dist_layer, "0");
   send_message(set_cmd, -1); // current location
 }
 
 static void hint_handler(ClickRecognizerRef recognizer, void *context) {
-  if (hint_layer) {
-    text_layer_destroy(hint_layer);
-    hint_layer = NULL;
+  if (layer_get_hidden((Layer *) hint_layer)) {
+    show_hint();
   }
   else {
-    Layer *window_layer = window_get_root_layer(window);
-    hint_layer = text_layer_create(hint_layer_size);
-    text_layer_set_font(hint_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-    text_layer_set_text_alignment(hint_layer, GTextAlignmentCenter);
-    layer_add_child(window_layer, text_layer_get_layer(hint_layer));
-    text_layer_set_text(hint_layer, "Press and hold to set target to current position.");
+    hide_hint();
   }  
 }  
 
@@ -144,7 +147,7 @@ void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, voi
 
 void in_received_handler(DictionaryIterator *iter, void *context) {
   // incoming message received
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Got message from phone!");
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Got message from phone!");
   static char units[9];
   Tuple *head_tuple = dict_find(iter, HEAD_KEY);
   if (head_tuple) {
@@ -159,23 +162,24 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   }
   Tuple *dist_tuple = dict_find(iter, DIST_KEY);
   if (dist_tuple) {
+    hide_hint();
     distance = dist_tuple->value->int32;
+  }
+  if (strcmp(units, "imperial") == 0) {
+    text_layer_set_text(unit_layer, "yd");
+    distance = distance / YARD_LENGTH;
+  }
+  else {
+    text_layer_set_text(unit_layer, "m");
+  }
+  if (distance > 2900) {
     if (strcmp(units, "imperial") == 0) {
-      text_layer_set_text(unit_layer, "yd");
-      distance = distance / YARD_LENGTH;
+      distance = (int) (distance / YARDS_IN_MILE);
+      text_layer_set_text(unit_layer, "mi");
     }
     else {
-      text_layer_set_text(unit_layer, "m");
-    }
-    if (distance > 2900) {
-      if (strcmp(units, "imperial") == 0) {
-        distance = (int) (distance / YARDS_IN_MILE);
-        text_layer_set_text(unit_layer, "mi");
-      }
-      else {
-        distance = (int) (distance / 1000);
-        text_layer_set_text(unit_layer, "km");
-      }
+      distance = (int) (distance / 1000);
+      text_layer_set_text(unit_layer, "km");
     }
   }
   Tuple *sens_tuple = dict_find(iter, SENS_KEY);
@@ -269,6 +273,12 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(calib_layer, GTextAlignmentCenter);
   text_layer_set_text(calib_layer, "C");
   layer_add_child(window_layer, text_layer_get_layer(calib_layer));
+
+  hint_layer = text_layer_create(hint_layer_size);
+  text_layer_set_font(hint_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(hint_layer, GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(hint_layer));
+  text_layer_set_text(hint_layer, "Press and hold to set target to current position.");
 
 }
 
