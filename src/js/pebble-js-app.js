@@ -76,7 +76,13 @@ Pebble.addEventListener("appmessage",
 
 Pebble.addEventListener("showConfiguration",
   function() {
-    var uri = serverAddress + token + '/configure';
+    var conf = {
+      'units': units,
+      'interval': interval,
+      'sens': sens};
+    // var uri = serverAddress + token + '/configure?conf=' +
+    var uri = serverAddress + '/configure#' +
+      encodeURIComponent(JSON.stringify(conf));
     console.log("Configuration url: " + uri);
     Pebble.openURL(uri);
   }
@@ -87,13 +93,13 @@ Pebble.addEventListener("webviewclosed",
     console.log(e.response);
     var options = JSON.parse(decodeURIComponent(e.response));
     console.log("Webview window returned: " + JSON.stringify(options));
-    units = (options["units"] === 1) ? 'imperial' : 'metric';
+    units = (options.units == 'imperial') ? 'imperial' : 'metric';
     localStorage.setItem("units", units);
     console.log("Units set to: " + units);
-    interval = parseInt(options["interval"]) || 0;
+    interval = parseInt(options.interval) || 0;
     localStorage.setItem("interval", interval);
     console.log("Interval set to: " + interval);
-    sens = parseInt(options["sens"]) || 5;
+    sens = parseInt(options.sens) || 5;
     localStorage.setItem("sens", sens);
     console.log("Sentitivity set to: " + sens);
     var msg = {"units": units,
@@ -217,6 +223,7 @@ function startWatcher() {
   }
   if (interval > 0) {
     console.log('Interval is ' + interval + ', using getCurrentPosition and setInterval');
+    navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
     locationInterval = setInterval(function() {
       navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
     }, interval * 1000);      
@@ -225,17 +232,21 @@ function startWatcher() {
     console.log('Interval not set, using watchPosition');
     navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
     locationWatcher = navigator.geolocation.watchPosition(locationSuccess, locationError, locationOptions);  
+    console.log("Started location watcher: " + locationWatcher);
   }
   // for testing: randomize movement!
   /*
   window.navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
-  locationWatcher = window.setInterval(function() {
+  if (!interval) {
+    interval = 10;
+  }
+  locationWatcher = setInterval(function() {
     lat1 = lat1 + Math.random()/100;
     lon1 = lon1 - Math.random()/100;
     calculate();
-  }, 5000);
+  }, interval * 1000);
+  console.log("Started fake location watcher: " + locationWatcher);
   */
-  console.log("Started location watcher: " + locationWatcher);
 }
 function toRad(num) {
   return num * Math.PI / 180;  
