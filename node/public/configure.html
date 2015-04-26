@@ -16,9 +16,13 @@
  }
  form {
   margin: 0 auto;
-  width: 40em;
+  max-width: 40em;
+  padding: 0 2%;
+  width: 96%;
  }
  fieldset {
+  margin: 0.5em auto;
+  max-width: 95%;
  }
  legend {
   font-weight: 800;
@@ -30,7 +34,12 @@
  label {
   display: block;
   float: left;
-  width: 12em;
+ }
+ label.long {
+  width: 9em;
+ }
+ label.short {
+  width: 6em;
  }
  input {
  }
@@ -43,8 +52,8 @@
 <fieldset>
 <legend>Units</legend>
 <p>Show distance in meters/kilometers or yards/miles?</p>
-<label><input type="radio" name="units" value="metric" id="metric" checked="checked" /> Metric (m, km)</label>
-<label><input type="radio" name="units" value="imperial" id="imperial" /> Imperial (y, mi)</label>
+<label class="long"><input type="radio" name="units" value="metric" id="metric" checked="checked" /> Metric (m, km)</label>
+<label class="long"><input type="radio" name="units" value="imperial" id="imperial" /> Imperial (y, mi)</label>
 </fieldset>
 <fieldset>
 <legend>Update interval</legend>
@@ -62,9 +71,9 @@
 <fieldset>
 <legend>Compass sensitivity</legend>
 <p>How fast the app should react to changes in compass heading?</p>
-<label><input type="radio" name="sens" value="1" id="fast" /> Fast</label>
-<label><input type="radio" name="sens" value="5" id="normal" checked="checked" /> Normal</label>
-<label><input type="radio" name="sens" value="10" id="slow" /> Slow</label>
+<label class="short"><input type="radio" name="sens" value="1" id="fast" /> Fast</label>
+<label class="short"><input type="radio" name="sens" value="5" id="normal" checked="checked" /> Normal</label>
+<label class="short"><input type="radio" name="sens" value="10" id="slow" /> Slow</label>
 </fieldset>
 <input type="submit" value="Save configuration" />
 </form>
@@ -73,8 +82,9 @@
  f.onsubmit = sendConfig;
  var conf;
  if (document.location.hash) {
+  // var json = getQueryParam('conf');
   var json = decodeURIComponent(document.location.hash.substr(1));
-  if (json && (json.charAt(0) == '[')) {
+  if (json && (json.charAt(0) == '{')) {
    conf = JSON.parse(json);
   }
   else {
@@ -87,13 +97,13 @@
    for (var i=0; i<f.interval.options.length; i++) {
     var opt = f.interval.options[i];
     if (opt.value == conf.interval) {
-     opt.checked = true;
+     opt.selected = true;
     }
    }
-   if (conf.sens == 'fast') {
+   if (conf.sens < 4) {
     document.getElementById('fast').checked = true;
    }
-   else if (conf.sens == 'slow') {
+   else if (conf.sens > 6) {
     document.getElementById('slow').checked = true;
    }
   }
