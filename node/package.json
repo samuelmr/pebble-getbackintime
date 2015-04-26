@@ -7,10 +7,12 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
-  "author": "Samuel Rinnetm\u00e4ki",
+  "author": "Samuel Rinnetmäki",
   "license": "ISC",
   "dependencies": {
+    "body-parser": "^1.12.3",
     "express": "^4.12.3",
+    "mongodb": "^2.0.27",
     "pebble-api": "^0.1.1"
   }
 }
