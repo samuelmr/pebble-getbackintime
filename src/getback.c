@@ -30,6 +30,10 @@ static const double YARD_LENGTH = 0.9144;
 static const double YARDS_IN_MILE = 1760;
 GPoint center;
 
+GColor approaching;
+GColor receding;
+GColor bg;
+
 const GPathInfo HEAD_PATH_POINTS = {
   3,
   (GPoint []) {
@@ -72,7 +76,7 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
   gpath_rotate_to(head_path, (TRIG_MAX_ANGLE / 360) * (heading + TRIGANGLE_TO_DEG(orientation)));
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_circle(ctx, center, 77);
-  graphics_context_set_fill_color(ctx, GColorWhite);
+  graphics_context_set_fill_color(ctx, bg);
   gpath_draw_filled(ctx, head_path);
   graphics_fill_circle(ctx, center, 49);
   graphics_context_set_fill_color(ctx, GColorBlack);
@@ -163,6 +167,15 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   Tuple *dist_tuple = dict_find(iter, DIST_KEY);
   if (dist_tuple) {
     hide_hint();
+    if (dist_tuple->value->int32 > distance) {
+      bg = receding;
+    }
+    else if (dist_tuple->value->int32 < distance) {
+      bg = approaching;
+    }
+    else {
+      bg = GColorWhite;
+    }
     distance = dist_tuple->value->int32;
   }
   if (strcmp(units, "imperial") == 0) {
@@ -305,6 +318,14 @@ static void init(void) {
       APP_LOG(APP_LOG_LEVEL_WARNING, "Launched from timeline, pin ID: %lu", id);
     }
   #endif
+  #ifdef PBL_COLOR
+    approaching = GColorMalachite;
+    receding = GColorFolly;
+  #else
+    approaching = GColorWhite;
+    receding = GColorWhite;
+  #endif
+  bg = GColorWhite;
   compass_service_set_heading_filter(TRIG_MAX_ANGLE*sensitivity/360);
   compass_service_subscribe(&compass_heading_handler);
   app_message_register_inbox_received(in_received_handler);
