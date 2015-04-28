@@ -81,7 +81,7 @@ Pebble.addEventListener("showConfiguration",
       'interval': interval,
       'sens': sens};
     // var uri = serverAddress + token + '/configure?conf=' +
-    var uri = serverAddress + '/configure#' +
+    var uri = serverAddress + 'configure.html#' +
       encodeURIComponent(JSON.stringify(conf));
     console.log("Configuration url: " + uri);
     Pebble.openURL(uri);
@@ -90,7 +90,7 @@ Pebble.addEventListener("showConfiguration",
 
 Pebble.addEventListener("webviewclosed",
   function(e) {
-    console.log(e.response);
+    // console.log(e.response);
     var options = JSON.parse(decodeURIComponent(e.response));
     console.log("Webview window returned: " + JSON.stringify(options));
     units = (options.units == 'imperial') ? 'imperial' : 'metric';
@@ -137,7 +137,8 @@ function addLocation(position) {
   var url = serverAddress + token + '/place/new';
   var req = new XMLHttpRequest();
   req.onload = function(res) {
-    console.log(res);
+    // console.log(res);
+    console.log("Sent place to server.");
   };
   req.open("post", url, true);
   req.send(obj);
