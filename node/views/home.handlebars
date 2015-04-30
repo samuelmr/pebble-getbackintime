@@ -1,0 +1,114 @@
+<p><strong>Get Back in Time</strong> is an app for the Pebble smart watch.
+You can use it to find your way back from your hiking trip, locate your parked car or
+just see how far you have traveled from a certain point. Just long-press UP, SEL or
+DOWN on your Pebble and your target is stored.</p>
+
+<div><a href="http://pblweb.com/appstore/553329021b2b662f5b000069" title="Get Back in Time on the Pebble appstore">
+  <img src="http://pblweb.com/badge/553329021b2b662f5b000069/black/large/" />
+</a></div>
+
+<p>The app allows you to store any amount of locations, which are pushed into your
+personal Pebble Timeline. You can browse your Timeline to find a location you wish
+to return to. Your Pebble will show you the heading and distance to your target. It
+uses the compass to show you which way to go and colors to indicate whether you're
+approaching your target or moving away from it. The target is stored so that you can
+use other Pebble apps in the mean time and when you return to Get Back in Time you
+will see up-to-date heading and distance to your target.</p>
+
+<p>The app works even if your Pebble doesn't yet have the Timeline functionality. In
+that case only one target can be set.</p>
+
+<h2>Advanced usage</h2>
+<p>You can set targets also using the form below or via an API. Just POST a JSON object
+with <tt>position</tt> element in the root level, and a new pin will be pushed to your
+Timeline. The object will be pushed to the Pebble Timeline. If you insert a <tt>pin</tt>
+element (<a href="http://developer.getpebble.com/guides/timeline/pin-structure/">see 
+Timeline Pin Structure</a>) to your JSON object, it will be passed on as is. Otherwise
+a new pin with some basic properties is created automatically. <tt>Open Watch App</tt>
+action is added to all pins.</p>
+<h3>Example JSON</h3>
+<code>{
+  "position": {
+    "coords": {
+      "latitude": 60.9,
+      "longitude": 24.1
+    }
+  },
+  pin {
+    // you shouldn't specify an id 
+    // but if you do, it must be a unique integer
+    "id": "1",
+    "time": "2015-04-29T16:07:22Z",
+    "layout": {
+      "type": "genericPin",
+      "title": "This was your location"
+    },
+    "createNotification": {
+      "layout": {
+        "type": "genericNotification",
+        "title": "Location stored!",
+        "body": "This pin was sent from app X."
+      }
+    },
+    "reminders": [
+      {
+        "time": "2015-04-29T18:07:22Z",
+        "layout": {
+          "type": "genericReminder",
+          "tinyIcon": "system://images/TIMELINE_CALENDAR",
+          "title": "Remember to get back!"
+        }
+      }
+    ]
+  }
+}
+</code>
+<h3>Example API call with JavaScript</h3>
+<code>// place your own token here!
+var token = '<span class="codetoken">{{token}}</span>';
+var url = 'http://getback.pebbletime.io/' + token + '/place/new';
+var req = new XMLHttpRequest();
+req.onload = function() {
+  console.log(this.responseText);
+};
+req.open("post", url, true);
+req.setRequestHeader('Content-Type: application/json');
+function success(position) {
+  var obj = {"position": position};
+  req.send(JSON.stringify(obj));
+}
+window.navigator.geolocation.getCurrentPosition(success);
+</code>
+
+<h3>Add new place manually</h3>
+<form method="post" action="place/new" id="add">
+<label for="lat">Latitude:</label> <input id="lat" name="latitude" type="number" step="any" />
+<label for="lon">Longitude:</label> <input id="lon" name="longitude" type="number" step="any" />
+<input type="submit" value="Send" />
+</form>
+<script>
+var f = document.getElementById('add');
+f.onsubmit = function(e) {
+  e.preventDefault();
+  var obj = {
+    "position": {
+      "coords": {
+        "latitude": parseFloat(f.lat.value),
+        "longitude": parseFloat(f.lon.value)
+      }
+    }
+  };
+  var req = new XMLHttpRequest();
+  req.onload = function() {
+    console.log(this.responseText);
+  };
+  req.open(f.method, f.action, true);
+  req.setRequestHeader('Content-Type', 'application/json');
+  console.log(JSON.stringify(obj)); 
+  req.send(JSON.stringify(obj)); 
+};
+navigator.geolocation.getCurrentPosition(function(pos) {
+  f.lat.value = pos.coords.latitude;
+  f.lon.value = pos.coords.longitude;
+});
+</script>

@@ -1,54 +1,4 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8" />
-<title>Configure</title>
-<meta content="True" name="HandheldFriendly">
-<meta content="yes" name="apple-mobile-web-app-capable">
-<meta content="width" name="MobileOptimized">
-<meta content="width=device-width,initial-scale=1" name="viewport">
-<link href="https://fonts.googleapis.com/css?family=Coda" rel="stylesheet" type="text/css">
-<style type="text/css">
- body {
- }
- h1 {
-  text-align: center;
- }
- form {
-  margin: 0 auto;
-  max-width: 40em;
-  padding: 0 2%;
-  width: 96%;
- }
- fieldset {
-  margin: 0.5em auto;
-  max-width: 95%;
- }
- legend {
-  font-weight: 800;
- }
- p {
-  margin: 0 0 1em 0;
-  font-style: italic;
- }
- label {
-  display: block;
-  float: left;
- }
- label.long {
-  width: 9em;
- }
- label.short {
-  width: 6em;
- }
- input {
- }
- 
-</style>
-</head>
-<body>
-<h1>Get Back in Time</h1>
-<form method="get" action="pebblejs://close">
+<form method="get" action="{{return_to}}" id="configform">
 <fieldset>
 <legend>Units</legend>
 <p>Show distance in meters/kilometers or yards/miles?</p>
@@ -77,14 +27,14 @@
 </fieldset>
 <input type="submit" value="Save configuration" />
 </form>
+<div id="tok"></div>
 <script type="text/javascript">
  var f = document.forms[0];
+ var tokenDiv = document.getElementById('tok');
  f.onsubmit = sendConfig;
  var conf;
- if (document.location.hash) {
-  // var json = getQueryParam('conf');
-  var json = decodeURIComponent(document.location.hash.substr(1));
-  if (json && (json.charAt(0) == '{')) {
+ var json = getQueryParam('conf');
+ if (json && (json.charAt(0) == '{')) {
    conf = JSON.parse(json);
   }
   else {
@@ -106,23 +56,24 @@
    else if (conf.sens > 6) {
     document.getElementById('slow').checked = true;
    }
-  }
- }
- function getQueryParam(variable, default_) {
-  var query = location.search.substring(1);
-  // work around CloudPebble issue #124
-  if (location.hash) {
-   query += location.hash.substr(location.hash.indexOf('?')+1);
-  }
-  var vars = query.split('&');
-  for (var i=vars.length-1; i>=0; i--) {
-   var pair = vars[i].split('=');
-   if (pair[0] == variable) {
-    return decodeURIComponent(pair[1]);
+   if (conf.token) {
+     var text = document.createTextNode('Your Pebble Timeline token is ');
+     var tt = document.createElement('tt');
+     tt.appendChild(document.createTextNode(conf.token));
+     var p = document.createElement('p');
+     p.appendChild(text);
+     p.appendChild(tt);
+     tokenDiv.appendChild(p);
+     a = document.createElement('a');
+     a.href = 'mailto:?subject=PebbleTimelineToken&body=' + conf.token;
+     a.appendChild(document.createTextNode('Send by mail'));
+     p = document.createElement('p');
+     p.appendChild(a);
+     p.appendChild(document.createTextNode(' (or just save as draft from which you can copy and paste)'));
+     tokenDiv.appendChild(p);
+     tokenDiv.style.display = 'block';
    }
   }
-  return default_ || false;
- }
  function sendConfig(e) {
   e.preventDefault();
   var config = {
@@ -130,11 +81,19 @@
     interval: f.interval.value,
     sens: f.sens.value
   };
-  console.log(config);
-  var return_to = getQueryParam('return_to', 'pebblejs://close#');
-  location.href = return_to + encodeURIComponent(JSON.stringify(config));
+  // console.log(config);
+  location.href = '{{return_to}}' + encodeURIComponent(JSON.stringify(config));
+  return false;
+ }
+ function getQueryParam(variable) {
+  var query = location.search.substring(1);
+  var vars = query.split('&');
+  for (var i=vars.length-1; i>=0; i--) {
+   var pair = vars[i].split('=');
+   if (pair[0] == variable) {
+    return decodeURIComponent(pair[1]);
+   }
+  }
   return false;
  }
 </script>
-</body>
-</html>
