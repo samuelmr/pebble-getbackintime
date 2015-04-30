@@ -117,6 +117,7 @@ static void reset_handler(ClickRecognizerRef recognizer, void *context) {
 
 static void hint_handler(ClickRecognizerRef recognizer, void *context) {
   if (layer_get_hidden((Layer *) hint_layer)) {
+    text_layer_set_text(hint_layer, "Press and hold to set target to current position.");
     show_hint();
   }
   else {
