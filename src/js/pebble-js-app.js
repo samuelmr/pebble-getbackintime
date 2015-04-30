@@ -140,8 +140,9 @@ function addLocation(position) {
     var url = serverAddress + token + '/place/new';
     var req = new XMLHttpRequest();
     req.onload = function(res) {
-      // console.log(res);
-      console.log("Sent place to server.");
+      var json = this.responseText;
+      var obj = JSON.parse(json); 
+      console.log("Sent place to server: " + obj._id);
     };
     req.open("post", url, true);
     req.setRequestHeader('Content-Type', 'application/json');
