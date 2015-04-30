@@ -80,8 +80,10 @@ Pebble.addEventListener("showConfiguration",
       'units': units,
       'interval': interval,
       'sens': sens};
-    // var uri = serverAddress + token + '/configure?conf=' +
-    var uri = serverAddress + 'configure.html#' +
+    if (token != '-') {
+      conf.token = token;
+    }
+    var uri = serverAddress + token + '/configure?conf=' +
       encodeURIComponent(JSON.stringify(conf));
     console.log("Configuration url: " + uri);
     Pebble.openURL(uri);
@@ -132,16 +134,19 @@ function locationSuccess(position) {
 
 function addLocation(position) {
   storeLocation(position);
-  // add place to server
-  var obj = {position: position};
-  var url = serverAddress + token + '/place/new';
-  var req = new XMLHttpRequest();
-  req.onload = function(res) {
-    // console.log(res);
-    console.log("Sent place to server.");
-  };
-  req.open("post", url, true);
-  req.send(obj);
+  if (token && (token != '-')) {
+    // add place to server
+    var obj = {position: position};
+    var url = serverAddress + token + '/place/new';
+    var req = new XMLHttpRequest();
+    req.onload = function(res) {
+      // console.log(res);
+      console.log("Sent place to server.");
+    };
+    req.open("post", url, true);
+    req.setRequestHeader('Content-Type', 'application/json');
+    req.send(JSON.stringify(obj));
+  }
 }
 
 function storeLocation(position) {
@@ -237,17 +242,17 @@ function startWatcher() {
   }
   // for testing: randomize movement!
   /*
+  */
   window.navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
   if (!interval) {
     interval = 10;
   }
   locationWatcher = setInterval(function() {
-    lat1 = lat1 + Math.random()/100;
-    lon1 = lon1 - Math.random()/100;
+    lat1 = lat1 + Math.random()/100 * ((Math.random() > 0.5) || -1);
+    lon1 = lon1 - Math.random()/100 * ((Math.random() > 0.5) || -1);
     calculate();
   }, interval * 1000);
   console.log("Started fake location watcher: " + locationWatcher);
-  */
 }
 function toRad(num) {
   return num * Math.PI / 180;  
