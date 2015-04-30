@@ -69,8 +69,9 @@ app.post('/:userToken/place/new', function(req, res) {
   var place = req.body || {};
   place.user = userToken;
   // if id is specified in params try to use it as mondodb id
-  // otherwise create a new id, just use current milliseconds - may result to duplicates!
-  place._id = parseInt(place.id) || new Date().getTime();
+  // otherwise create a new id, just use milliseconds since a nearby epoch...
+  // This may result to duplicates!
+  place._id = parseInt(place.id) || new Date().getTime() - 1430000000000;
   var pos = place.position; // || {};
   if (!pos || !pos.coords || !pos.coords.latitude || !pos.coords.longitude) {
 /*
