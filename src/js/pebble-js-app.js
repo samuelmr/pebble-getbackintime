@@ -37,6 +37,10 @@ Pebble.addEventListener("ready", function(e) {
         token = timelineToken;
         console.log('Got timeline token ' + token);
         localStorage.setItem("token", token);
+        // sending id from phone to watch is just a signal that
+        // the phone is ready to accept app messages (e.g. id)
+        var msg = {"id": -1};
+        sendMessage(msg);
       },
       function (error) { 
         console.log('Error getting timeline token: ' + error);
@@ -122,7 +126,7 @@ function appMessageAck(e) {
 }
 
 function appMessageNack(e) {
-  console.log("Message rejected by Pebble! " + e.error);
+  console.log("Message rejected by Pebble! ");
 }
 
 function locationSuccess(position) {
@@ -212,9 +216,19 @@ function getPositionFromServer(id) {
   req.send();  
 }
 
-function parseServerResponse(res) {
-  if (!res.position) {
-    console.warn('No position from server');
+function parseServerResponse() {
+  var res = this.responseText;
+  if (!res) {
+    console.warn('No response from server');
+    return false;
+  }
+  if ((this.status != 200) || (this.responseText.substr(0,1) != '{')) {
+    console.warn('Server did not return a JSON object: ' + this.responseText);
+    return false;
+  }
+  var obj = JSON.parse(res);
+  if (!obj || !obj.position) {
+    console.warn('No position from server: ' + this.responseText);
     return false;
   }
   console.log('Got position from server: ' + res.position.latitude + ', ' + res.position.longitude);

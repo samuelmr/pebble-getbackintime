@@ -153,6 +153,17 @@ void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, voi
 void in_received_handler(DictionaryIterator *iter, void *context) {
   // incoming message received
   // APP_LOG(APP_LOG_LEVEL_DEBUG, "Got message from phone!");
+  Tuple *id_tuple = dict_find(iter, ID_KEY);
+  if (id_tuple) {
+    // what's the best way to find out if launch_get_args is supported?
+    #ifdef PBL_COLOR
+      if(launch_reason() == APP_LAUNCH_TIMELINE_ACTION) {
+        uint32_t id = launch_get_args();
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "Launched from timeline, pin ID: %lu", id);
+        send_message(set_cmd, (int32_t) id);
+      }
+    #endif
+  }
   static char units[9];
   Tuple *head_tuple = dict_find(iter, HEAD_KEY);
   if (head_tuple) {
@@ -311,14 +322,7 @@ static void window_unload(Window *window) {
 }
 
 static void init(void) {
-  #ifdef APP_LAUNCH_TIMELINE_ACTION
-    // if launched from timeline, set target to given id
-    if(launch_reason() == APP_LAUNCH_TIMELINE_ACTION) {      
-      uint32_t id = launch_get_args();
-      send_message(set_cmd, (int32_t) id);
-      APP_LOG(APP_LOG_LEVEL_WARNING, "Launched from timeline, pin ID: %lu", id);
-    }
-  #endif
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Launch reason: %d", launch_reason());
   #ifdef PBL_COLOR
     approaching = GColorMalachite;
     receding = GColorFolly;
