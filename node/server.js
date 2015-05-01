@@ -24,7 +24,7 @@ app.set('view engine', 'handlebars');
 app.use(express.static(__dirname + '/public'));
 app.set('port', (process.env.PORT || 5000)); // set the port on the instance
 
-function pushPin(place) {
+function pushPin(place, res) {
   var pin;
   // var pinID = parseInt(place._id.toHexString(), 16);
   var pinID = place._id.toString();
@@ -51,12 +51,13 @@ function pushPin(place) {
   }));
   timeline.sendUserPin(place.user, pin, function (err, body, resp) {
     if(err) {
+      console.log('Failed to push pin to timeline: ' + err);
       res.status(400);
       res.send('Failed to push pin to timeline: ' + err);
-      return;
     }
     else {
       console.log('Pin successfully pushed!');
+      res.json(place);
     }
   });
 }
@@ -124,9 +125,7 @@ app.post('/:userToken/place/new', function(req, res) {
                 return;
               }
               console.log('Place saved to db! id = ' + place._id);
-              pushPin(place);
-              res.json(place);
-              return;
+              pushPin(place, res);
             });
           }
           else {
@@ -137,9 +136,7 @@ app.post('/:userToken/place/new', function(req, res) {
         }
         else {
           console.log('Place saved to db! id = ' + place._id);
-          pushPin(place);
-          res.json(place);
-          return;
+          pushPin(place, res);
         }
       });
     });
@@ -148,7 +145,7 @@ app.post('/:userToken/place/new', function(req, res) {
 
 app.get('/:userToken/place/:id', function(req, res) {
   var userToken = req.params.userToken;
-  var id = req.params.id;
+  var id = parseInt(req.params.id);
   console.log('Trying to connect to mongodb at ' + mongoUri);
   MongoClient.connect(mongoUri, function(err, db) {
     if (err) {
@@ -164,7 +161,8 @@ app.get('/:userToken/place/:id', function(req, res) {
           res.send('Failed to retrieve place from db: ' + err);
           return;
         }
-        if (!doc || (doc.user != userToken)) {
+        // console.log(doc);
+        if (!doc || (doc.user != userToken)) {
           res.status(403);
           res.send('No place with id ' + id + ' found for user token ' + userToken);
           return;
