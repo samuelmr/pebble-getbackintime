@@ -130,7 +130,10 @@ function appMessageNack(e) {
 }
 
 function locationSuccess(position) {
-  // console.log("Got location " + position.coords.latitude + ',' + position.coords.longitude + ', heading at ' + position.coords.heading);
+  // console.log("Got location " +
+  // position.coords.latitude + ',' +
+  // position.coords.longitude + ', heading at ' +
+  // position.coords.heading);
   lat1 = position.coords.latitude;
   lon1 = position.coords.longitude;
   calculate();
@@ -159,7 +162,9 @@ function storeLocation(position) {
   lon2 = position.coords.longitude;
   localStorage.setItem("lat2", lat2);
   localStorage.setItem("lon2", lon2);
-  // console.log("Stored location " + position.coords.latitude + ',' + position.coords.longitude);
+  // console.log("Stored location " +
+  // position.coords.latitude + ',' +
+  // position.coords.longitude);
   calculate();
 }
 
@@ -231,8 +236,10 @@ function parseServerResponse() {
     console.warn('No position from server: ' + this.responseText);
     return false;
   }
-  console.log('Got position from server: ' + res.position.latitude + ', ' + res.position.longitude);
-  storeLocation(res.position);
+  console.log('Got position from server: ' +
+    obj.position.coords.latitude + ', ' +
+    obj.position.coords.longitude);
+  storeLocation(obj.position);
 }
 
 function startWatcher() {  
