@@ -65,13 +65,20 @@
      var p = document.createElement('p');
      p.appendChild(text);
      p.appendChild(tt);
+     p.appendChild(document.createTextNode(' '));
      tokenDiv.appendChild(p);
+     p = document.createElement('p');
      a = document.createElement('a');
      a.href = 'mailto:?subject=PebbleTimelineToken&body=' + token;
      a.appendChild(document.createTextNode('Send by mail'));
-     p = document.createElement('p');
      p.appendChild(a);
      p.appendChild(document.createTextNode(' (or just save as draft from which you can copy and paste)'));
+     tokenDiv.appendChild(p);
+     p = document.createElement('p');
+     var a = document.createElement('a');
+     a.appendChild(document.createTextNode('Token usage instructions'));
+     a.href = '/' + token + '/';
+     p.appendChild(a);
      tokenDiv.appendChild(p);
      tokenDiv.style.display = 'block';
  }

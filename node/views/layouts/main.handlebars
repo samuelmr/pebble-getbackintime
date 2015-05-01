@@ -25,6 +25,9 @@
  p+p {
   text-indent: 2em;
  }
+ #tok p+p {
+  text-indent: 0;
+ }
  code {
   background-color: #CCC;
   border-radius: 0.5em;
@@ -35,11 +38,15 @@
  }
 
   /* for config form */
- form, #tok {
+ #configform, #tok {
   margin: 0 auto;
   max-width: 40em;
   padding: 0 2%;
   width: 96%;
+ }
+ #tok {
+  display: none;
+  margin: 2em auto;
  }
  fieldset {
   margin: 0.5em auto;
@@ -63,10 +70,6 @@
   width: 6em;
  }
  input {
- }
- #tok {
-  display: none;
-  margin: 2em auto;
  }
    
 /* config form done */
