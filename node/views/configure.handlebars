@@ -66,14 +66,14 @@ using <a href="http://www.gisgraphy.com/">Gisgraphy</a>.</p>
   };
   var req = new XMLHttpRequest();
   req.onload = function() {
-    console.log(this.responseText);
+    // console.log(this.responseText);
     var div = document.createElement('div');
-    div.className = 'error';
+    div.className = 'result error';
     var msg = 'Error pushing to timeline!';
     if ((this.status == 200) && (this.responseText.substr(0, 1) == '{')) {
      var obj = JSON.parse(this.responseText);
      if (obj.pin && obj.pin.layout && obj.pin.layout.title) {
-      div.className = 'ok';
+      div.className = 'result ok';
       msg = 'Added place ' + obj.pin.layout.title + ' to timeline!';
      }
     }
@@ -85,7 +85,7 @@ using <a href="http://www.gisgraphy.com/">Gisgraphy</a>.</p>
   };
   req.open(af.method, af.action, true);
   req.setRequestHeader('Content-Type', 'application/json');
-  console.log(JSON.stringify(obj));
+  // console.log(JSON.stringify(obj));
   req.send(JSON.stringify(obj));
  };
 
@@ -100,27 +100,27 @@ using <a href="http://www.gisgraphy.com/">Gisgraphy</a>.</p>
  var token = '{{token}}';
  var json = getQueryParam('conf');
  if (json && (json.charAt(0) == '{')) {
-   conf = JSON.parse(json);
+  conf = JSON.parse(json);
+ }
+ else {
+  // console.log('Invalid config ' + json);
+ }
+ if (conf) {
+  if (conf.units == 'imperial') {
+   document.getElementById('imperial').checked = true;
   }
-  else {
-   console.log('Invalid config ' + json);
+  for (var i=0; i<f.interval.options.length; i++) {
+   var opt = f.interval.options[i];
+   if (opt.value == conf.interval) {
+    opt.selected = true;
+   }
   }
-  if (conf) {
-   if (conf.units == 'imperial') {
-    document.getElementById('imperial').checked = true;
-   }
-   for (var i=0; i<f.interval.options.length; i++) {
-    var opt = f.interval.options[i];
-    if (opt.value == conf.interval) {
-     opt.selected = true;
-    }
-   }
-   if (conf.sens < 4) {
-    document.getElementById('fast').checked = true;
-   }
-   else if (conf.sens > 6) {
-    document.getElementById('slow').checked = true;
-   }
+  if (conf.sens < 4) {
+   document.getElementById('fast').checked = true;
+  }
+  else if (conf.sens > 6) {
+   document.getElementById('slow').checked = true;
+  }
  }
  if (token) {
   var h = document.createElement('h2');
