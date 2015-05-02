@@ -19,7 +19,6 @@ var serverAddress = 'http://getback.pebbletime.io/';
 // var geocoder = 'http://nominatim.openstreetmap.org/reverse?format=json&zoom=18';
 // var geocoder = 'http://api.geonames.org/findNearestAddressJSON?formatted=false&style=full';
 var geocoder = 'http://services.gisgraphy.com/street/search?format=json&from=0&to=1';
-var rgc = new XMLHttpRequest(); // xhr for reverse geocoding, only one instance!
 
 Pebble.addEventListener("ready", function(e) {
   lat2 = parseFloat(localStorage.getItem("lat2")) || null;
@@ -151,7 +150,10 @@ function addLocation(position) {
     var url = geocoder + '&username=' + token + '&lat=' +
       position.coords.latitude + '&lng=' +
       position.coords.longitude;
-    rgc.abort();
+    var rgc = new XMLHttpRequest(); // xhr for reverse geocoding, only one instance!
+    rgc.open("get", url, true);
+    rgc.setRequestHeader('User-Agent', 'Get Back in Time/1.4');
+    // rgc.setRequestHeader('X-Forwarded-For', token);
     rgc.onerror = rgc.ontimeout = function(e) {
       console.log("Reverse geocoding error: " + this.statusText);
     }
@@ -195,9 +197,6 @@ function addLocation(position) {
       req.setRequestHeader('Content-Type', 'application/json');
       req.send(JSON.stringify(obj));
     };
-    rgc.open("get", url, true);
-    rgc.setRequestHeader('User-Agent', 'Get Back in Time/1.4');
-    // rgc.setRequestHeader('X-Forwarded-For', token);
     rgc.send(null);
     console.log("Trying to reverse geocode: " + url);
   }
