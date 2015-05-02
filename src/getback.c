@@ -156,7 +156,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   Tuple *id_tuple = dict_find(iter, ID_KEY);
   if (id_tuple) {
     // what's the best way to find out if launch_get_args is supported?
-    #ifdef PBL_COLOR
+    #ifdef PBL_PLATFORM_BASALT
       if(launch_reason() == APP_LAUNCH_TIMELINE_ACTION) {
         uint32_t id = launch_get_args();
         APP_LOG(APP_LOG_LEVEL_DEBUG, "Launched from timeline, pin ID: %lu", id);
