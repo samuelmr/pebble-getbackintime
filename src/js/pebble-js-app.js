@@ -16,6 +16,10 @@ var locationWatcher;
 var locationInterval;
 var locationOptions = {timeout: 15000, maximumAge: 1000, enableHighAccuracy: true };
 var serverAddress = 'http://getback.pebbletime.io/';
+// var geocoder = 'http://nominatim.openstreetmap.org/reverse?format=json&zoom=18';
+// var geocoder = 'http://api.geonames.org/findNearestAddressJSON?formatted=false&style=full';
+var geocoder = 'http://services.gisgraphy.com/street/search?format=json&from=0&to=1';
+var rgc = new XMLHttpRequest(); // xhr for reverse geocoding, only one instance!
 
 Pebble.addEventListener("ready", function(e) {
   lat2 = parseFloat(localStorage.getItem("lat2")) || null;
@@ -142,18 +146,60 @@ function locationSuccess(position) {
 function addLocation(position) {
   storeLocation(position);
   if (token && (token != '-')) {
-    // add place to server
-    var obj = {position: position};
-    var url = serverAddress + token + '/place/new';
-    var req = new XMLHttpRequest();
-    req.onload = function(res) {
+    // get address
+    var addr = position.coords.latitude + ',' + position.coords.longitude;
+    var url = geocoder + '&username=' + token + '&lat=' +
+      position.coords.latitude + '&lng=' +
+      position.coords.longitude;
+    rgc.abort();
+    rgc.onerror = rgc.ontimeout = function(e) {
+      console.log("Reverse geocoding error: " + this.statusText);
+    }
+    rgc.onload = function(res) {
       var json = this.responseText;
-      var obj = JSON.parse(json); 
-      console.log("Sent place to server: " + obj._id);
+      console.log("Got: " + json + " from reverse geocoder");
+      var latlon = Math.round(position.coords.latitude*10000)/10000 + ',' +
+                   Math.round(position.coords.longitude*10000)/10000;
+      var obj = {
+        "position": position,
+        "pin": {
+          "time": new Date().toISOString(),
+          "layout": {
+            "type": "genericPin",
+            "tinyIcon": "system://images/NOTIFICATION_FLAG_TINY",
+            "title": latlon,
+            "subtitle": "Get Back in Time",
+            "body": "Set from watch."
+          },
+        }
+      }
+      var res = JSON.parse(json);
+      if (res && res.result && res.result[0] && res.result[0].name) {
+        console.log("Reverse geocoded address: " + res.result[0].name);
+        obj.pin.layout.title = res.result[0].name;
+      };
+      // add place to server
+      var url = serverAddress + token + '/place/new';
+      var req = new XMLHttpRequest();
+      req.onload = function(res) {
+        var json = this.responseText;
+        console.log('Got ' + json);
+        if (!json || (json.substr(0, 1) != '{')) {
+          console.log("Error sending place to server: " + json);
+          return;
+        }
+        var obj = JSON.parse(json); 
+        console.log("Sent place to server: " + obj._id);
+      };
+      req.open("post", url, true);
+      req.setRequestHeader('Content-Type', 'application/json');
+      req.send(JSON.stringify(obj));
     };
-    req.open("post", url, true);
-    req.setRequestHeader('Content-Type', 'application/json');
-    req.send(JSON.stringify(obj));
+    rgc.open("get", url, true);
+    rgc.setRequestHeader('User-Agent', 'Get Back in Time/1.4');
+    // rgc.setRequestHeader('X-Forwarded-For', token);
+    rgc.send(null);
+    console.log("Trying to reverse geocode: " + url);
   }
 }
 
