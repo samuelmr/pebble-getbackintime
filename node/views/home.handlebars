@@ -1,3 +1,5 @@
+<a href="https://github.com/samuelmr/pebble-getbackintime"><img style="position: fixed; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/e7bbb0521b397edbd5fe43e7f760759336b5e05f/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f677265656e5f3030373230302e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_green_007200.png"></a>
+
 <p><strong>Get Back in Time</strong> is an app for the Pebble smart watch.
 You can use it to find your way back from your hiking trip, locate your parked car or
 just see how far you have traveled from a certain point. Just long-press UP, SEL or
@@ -46,13 +48,16 @@ and scroll to the end of the configuration screen.</p>
     "time": "2015-04-29T16:07:22Z",
     "layout": {
       "type": "genericPin",
-      "title": "This was your location"
+      "tinyIcon": "system://images/NOTIFICATION_FLAG_TINY",
+      "title": "Your car is here",
+      "subtitle": "Get Back in Time",
+      "body": "Thank's for using Amazing Parking App."
     },
     "createNotification": {
       "layout": {
         "type": "genericNotification",
-        "title": "Location stored!",
-        "body": "This pin was sent from app X."
+        "title": "Car location stored!",
+        "body": "This pin was sent from Amazing Parking App."
       }
     },
     "reminders": [
@@ -61,7 +66,7 @@ and scroll to the end of the configuration screen.</p>
         "layout": {
           "type": "genericReminder",
           "tinyIcon": "system://images/TIMELINE_CALENDAR",
-          "title": "Remember to get back!"
+          "title": "It's time to get back!"
         }
       }
     ]
@@ -84,36 +89,10 @@ function success(position) {
 }
 window.navigator.geolocation.getCurrentPosition(success);
 </code>
-
-<h3>Add new place manually</h3>
-<form method="post" action="place/new" id="add">
-<label for="lat">Latitude:</label> <input id="lat" name="latitude" type="number" step="any" />
-<label for="lon">Longitude:</label> <input id="lon" name="longitude" type="number" step="any" />
-<input type="submit" value="Send" />
-</form>
-<script>
-var f = document.getElementById('add');
-f.onsubmit = function(e) {
-  e.preventDefault();
-  var obj = {
-    "position": {
-      "coords": {
-        "latitude": parseFloat(f.lat.value),
-        "longitude": parseFloat(f.lon.value)
-      }
-    }
-  };
-  var req = new XMLHttpRequest();
-  req.onload = function() {
-    console.log(this.responseText);
-  };
-  req.open(f.method, f.action, true);
-  req.setRequestHeader('Content-Type', 'application/json');
-  console.log(JSON.stringify(obj)); 
-  req.send(JSON.stringify(obj)); 
-};
-navigator.geolocation.getCurrentPosition(function(pos) {
-  f.lat.value = pos.coords.latitude;
-  f.lon.value = pos.coords.longitude;
-});
-</script>
+<h3>API usage restrictions</h3>
+<p>The API currently runs on a free <a href="https://www.heroku.com/">Heroku</a>
+instance and has "best effort" service level. Please test your implementations on your
+own environment in order to minimize the load to the API server. If you want better
+service level or if you plan to automatically push more than a dozen locations per day
+to your timeline, consider implementing your own API server. You can start by cloning
+<a href="https://github.com/samuelmr/pebble-getbackintime">the code on Github</a>.</p>

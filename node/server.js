@@ -29,8 +29,17 @@ function pushPin(place, res) {
   // var pinID = parseInt(place._id.toHexString(), 16);
   var pinID = place._id.toString();
   if (place.pin) {
-    pin = place.pin;
-    pin.id = pinID;
+    place.pin.id = pinID;
+    place.pin.time = new Date(place.pin.time);
+    try {
+     pin = new Timeline.Pin(place.pin);
+    }
+    catch(e) {
+      console.log('Failed to create pin: ' + e);
+      res.status(400);
+      res.send('Failed to create pin: ' + e);
+      return;
+    }
   }
   else {
     pin = new Timeline.Pin({
@@ -49,6 +58,7 @@ function pushPin(place, res) {
     type: Timeline.Pin.ActionType.OPEN_WATCH_APP,
     launchCode: place._id
   }));
+  place.pin = pin;
   timeline.sendUserPin(place.user, pin, function (err, body, resp) {
     if(err) {
       console.log('Failed to push pin to timeline: ' + err);

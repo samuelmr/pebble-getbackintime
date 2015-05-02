@@ -19,14 +19,18 @@
   line-height: 2;
   margin: 0 auto;
   max-width: 560px;
-  padding: 0 1px;
+  padding: 0;
   width: 96%;
+ }
+ img {
+  max-width: 96%;
+ }
+ h2, h3 {
+  margin-top: 1em;
+  text-align: center;
  }
  p+p {
   text-indent: 2em;
- }
- #tok p+p {
-  text-indent: 0;
  }
  code {
   background-color: #CCC;
@@ -36,19 +40,28 @@
   padding: 0 0.5em;
   white-space: pre;
  }
-
-  /* for config form */
- #configform, #tok {
-  margin: 0 auto;
-  max-width: 40em;
-  padding: 0 2%;
-  width: 96%;
- }
  #tok {
   display: none;
   margin: 2em auto;
  }
+ #tok p+p {
+  text-indent: 0;
+ }
+ #add .result {
+  border-radius: 0.5em;
+  padding: 0.5em;
+  margin: 0.5em 0;
+ }
+ #add .error {
+  border: 2px solid red;
+  color: red;
+ }
+ #add .ok {
+  border: 1px solid #090;
+ }
+ /* for config form */
  fieldset {
+  border-radius: 0.25em;
   margin: 0.5em auto;
   max-width: 95%;
  }
@@ -56,8 +69,10 @@
   font-weight: 700;
  }
  form p {
-  margin: 0 0 1em 0;
+  margin: 0 0 0.2em 0;
+  font-size: 80%;
   font-style: italic;
+  line-height: 1;
  }
  #configform label {
   display: block;
@@ -71,7 +86,6 @@
  }
  input {
  }
-   
 /* config form done */
 </style>
 </head>

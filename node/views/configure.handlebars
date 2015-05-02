@@ -1,4 +1,5 @@
 <form method="get" action="{{return_to}}" id="configform">
+<h2>Configure</h2>
 <fieldset>
 <legend>Units</legend>
 <p>Show distance in meters/kilometers or yards/miles?</p>
@@ -27,9 +28,72 @@
 </fieldset>
 <input type="submit" value="Save configuration" />
 </form>
+<form method="post" action="place/new" id="add">
+<h2>Add new place manually</h2>
+<div>
+ <label for="name" id="namelabel">Name:</label> <input id="name" name="name" type="text" size="40" />
+</div>
+<div>
+ <label for="lat">Latitude:</label> <input id="lat" name="latitude" type="number" step="any" />
+ <label for="lon">Longitude:</label> <input id="lon" name="longitude" type="number" step="any" />
+</div>
+<input type="submit" value="Send" />
+</form>
 <div id="tok"></div>
-<script type="text/javascript">
- var f = document.forms[0];
+<p>When you set a target using your Pebble, the coordinates are converted to addresses
+using <a href="http://www.gisgraphy.com/">Gisgraphy</a>.</p>
+<script>
+ var af = document.getElementById('add');
+ af.onsubmit = function(e) {
+  e.preventDefault();
+  var obj = {
+    "position": {
+      "coords": {
+        "latitude": parseFloat(af.lat.value),
+        "longitude": parseFloat(af.lon.value)
+      }
+    },
+    "pin": {
+      "time": new Date().toISOString(),
+      "layout": {
+        "type": "genericPin",
+        "tinyIcon": "system://images/NOTIFICATION_FLAG",
+        "title": af.name.value,
+        "subtitle": "Get Back in Time",
+        "body": "Set from config page."
+      },
+    }
+  };
+  var req = new XMLHttpRequest();
+  req.onload = function() {
+    console.log(this.responseText);
+    var div = document.createElement('div');
+    div.className = 'error';
+    var msg = 'Error pushing to timeline!';
+    if ((this.status == 200) && (this.responseText.substr(0, 1) == '{')) {
+     var obj = JSON.parse(this.responseText);
+     if (obj.pin && obj.pin.layout && obj.pin.layout.title) {
+      div.className = 'ok';
+      msg = 'Added place ' + obj.pin.layout.title + ' to timeline!';
+     }
+    }
+    else {
+     msg += ' (' + this.responseText + ')';
+    }
+    div.appendChild(document.createTextNode(msg));
+    af.appendChild(div);
+  };
+  req.open(af.method, af.action, true);
+  req.setRequestHeader('Content-Type', 'application/json');
+  console.log(JSON.stringify(obj));
+  req.send(JSON.stringify(obj));
+ };
+
+ navigator.geolocation.getCurrentPosition(function(pos) {
+  af.lat.value = pos.coords.latitude;
+  af.lon.value = pos.coords.longitude;
+ });
+ var f = document.getElementById('configform');
  var tokenDiv = document.getElementById('tok');
  f.onsubmit = sendConfig;
  var conf;
@@ -59,28 +123,31 @@
    }
  }
  if (token) {
-     var text = document.createTextNode('Your Pebble Timeline token is ');
-     var tt = document.createElement('tt');
-     tt.appendChild(document.createTextNode(token));
-     var p = document.createElement('p');
-     p.appendChild(text);
-     p.appendChild(tt);
-     p.appendChild(document.createTextNode(' '));
-     tokenDiv.appendChild(p);
-     p = document.createElement('p');
-     a = document.createElement('a');
-     a.href = 'mailto:?subject=PebbleTimelineToken&body=' + token;
-     a.appendChild(document.createTextNode('Send by mail'));
-     p.appendChild(a);
-     p.appendChild(document.createTextNode(' (or just save as draft from which you can copy and paste)'));
-     tokenDiv.appendChild(p);
-     p = document.createElement('p');
-     var a = document.createElement('a');
-     a.appendChild(document.createTextNode('Token usage instructions'));
-     a.href = '/' + token + '/';
-     p.appendChild(a);
-     tokenDiv.appendChild(p);
-     tokenDiv.style.display = 'block';
+  var h = document.createElement('h2');
+  h.appendChild(document.createTextNode('Add places using the API'));
+  tokenDiv.appendChild(h);
+  var p = document.createElement('p');
+  var a = document.createElement('a');
+  a.appendChild(document.createTextNode('See API manual'));
+  a.href = '/' + token + '/';
+  p.appendChild(a);
+  tokenDiv.appendChild(p);
+  var text = document.createTextNode('Your Pebble Timeline token is ');
+  var tt = document.createElement('tt');
+  tt.appendChild(document.createTextNode(token));
+  p = document.createElement('p');
+  p.appendChild(text);
+  p.appendChild(tt);
+  p.appendChild(document.createTextNode(' '));
+  tokenDiv.appendChild(p);
+  p = document.createElement('p');
+  a = document.createElement('a');
+  a.href = 'mailto:?subject=PebbleTimelineToken&body=' + token;
+  a.appendChild(document.createTextNode('Send by mail'));
+  p.appendChild(a);
+  p.appendChild(document.createTextNode(' (or just save as draft from which you can copy and paste)'));
+  tokenDiv.appendChild(p);
+  tokenDiv.style.display = 'block';
  }
  function sendConfig(e) {
   e.preventDefault();
