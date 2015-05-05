@@ -84,13 +84,13 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
 
 static void show_hint(void) {
   if (hint_layer) {
-    layer_set_hidden((Layer *) hint_layer, false);
+    layer_set_hidden(text_layer_get_layer(hint_layer), false);
   }
 }
 
 static void hide_hint(void) {
   if (hint_layer) {
-    layer_set_hidden((Layer *) hint_layer, true);
+    layer_set_hidden(text_layer_get_layer(hint_layer), true);
   }
 }
 
@@ -116,7 +116,7 @@ static void reset_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void hint_handler(ClickRecognizerRef recognizer, void *context) {
-  if (layer_get_hidden((Layer *) hint_layer)) {
+  if (layer_get_hidden(text_layer_get_layer(hint_layer))) {
     text_layer_set_text(hint_layer, "Press and hold to set target to current position.");
     show_hint();
   }
