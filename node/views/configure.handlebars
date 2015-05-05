@@ -30,6 +30,13 @@
 </form>
 <form method="post" action="place/new" id="add">
 <h2>Add new place manually</h2>
+<p>When you set a target using your Pebble (long press any button on the right),
+the coordinates are converted to place names using
+<a href="http://www.gisgraphy.com/">Gisgraphy</a>.</p>
+<fieldset>
+<p>Here you can set a target by entering name and coordinates manually. The targets are 
+pushed to your timeline (to current time). They won't replace your current target until
+you select them from the timeline.</p>
 <div>
  <label for="name" id="namelabel">Name:</label> <input id="name" name="name" type="text" size="40" />
 </div>
@@ -38,66 +45,16 @@
  <label for="lon">Longitude:</label> <input id="lon" name="longitude" type="number" step="any" />
 </div>
 <input type="submit" value="Send" />
+</fieldset>
 </form>
 <div id="tok"></div>
-<p>When you set a target using your Pebble, the coordinates are converted to addresses
-using <a href="http://www.gisgraphy.com/">Gisgraphy</a>.</p>
 <script>
- var af = document.getElementById('add');
- af.onsubmit = function(e) {
-  e.preventDefault();
-  var obj = {
-    "position": {
-      "coords": {
-        "latitude": parseFloat(af.lat.value),
-        "longitude": parseFloat(af.lon.value)
-      }
-    },
-    "pin": {
-      "time": new Date().toISOString(),
-      "layout": {
-        "type": "genericPin",
-        "tinyIcon": "system://images/NOTIFICATION_FLAG",
-        "title": af.name.value,
-        "subtitle": "Get Back in Time",
-        "body": "Set from config page."
-      },
-    }
-  };
-  var req = new XMLHttpRequest();
-  req.onload = function() {
-    // console.log(this.responseText);
-    var div = document.createElement('div');
-    div.className = 'result error';
-    var msg = 'Error pushing to timeline!';
-    if ((this.status == 200) && (this.responseText.substr(0, 1) == '{')) {
-     var obj = JSON.parse(this.responseText);
-     if (obj.pin && obj.pin.layout && obj.pin.layout.title) {
-      div.className = 'result ok';
-      msg = 'Added place ' + obj.pin.layout.title + ' to timeline!';
-     }
-    }
-    else {
-     msg += ' (' + this.responseText + ')';
-    }
-    div.appendChild(document.createTextNode(msg));
-    af.appendChild(div);
-  };
-  req.open(af.method, af.action, true);
-  req.setRequestHeader('Content-Type', 'application/json');
-  // console.log(JSON.stringify(obj));
-  req.send(JSON.stringify(obj));
- };
-
- navigator.geolocation.getCurrentPosition(function(pos) {
-  af.lat.value = pos.coords.latitude;
-  af.lon.value = pos.coords.longitude;
- });
  var f = document.getElementById('configform');
  var tokenDiv = document.getElementById('tok');
  f.onsubmit = sendConfig;
  var conf;
  var token = '{{token}}';
+ var af = document.getElementById('add');
  var json = getQueryParam('conf');
  if (json && (json.charAt(0) == '{')) {
   conf = JSON.parse(json);
@@ -122,7 +79,56 @@ using <a href="http://www.gisgraphy.com/">Gisgraphy</a>.</p>
    document.getElementById('slow').checked = true;
   }
  }
- if (token) {
+ if (token && (token != '-')) {
+  af.onsubmit = function(e) {
+   e.preventDefault();
+   var obj = {
+    "position": {
+    "coords": {
+     "latitude": parseFloat(af.lat.value),
+     "longitude": parseFloat(af.lon.value)
+    }
+   },
+   "pin": {
+     "time": new Date().toISOString(),
+     "layout": {
+      "type": "genericPin",
+      "tinyIcon": "system://images/NOTIFICATION_FLAG",
+      "title": af.name.value,
+      "subtitle": "Get Back in Time",
+      "body": "Set from config page."
+     },
+    }
+   };
+   var req = new XMLHttpRequest();
+   req.onload = function() {
+    // console.log(this.responseText);
+    var div = document.createElement('div');
+    div.className = 'result error';
+    var msg = 'Error pushing to timeline!';
+    if ((this.status == 200) && (this.responseText.substr(0, 1) == '{')) {
+     var obj = JSON.parse(this.responseText);
+     if (obj.pin && obj.pin.layout && obj.pin.layout.title) {
+      div.className = 'result ok';
+      msg = 'Added place ' + obj.pin.layout.title + ' to timeline!';
+     }
+    }
+    else {
+     msg += ' (' + this.responseText + ')';
+    }
+    div.appendChild(document.createTextNode(msg));
+    af.appendChild(div);
+   };
+   req.open(af.method, af.action, true);
+   req.setRequestHeader('Content-Type', 'application/json');
+   // console.log(JSON.stringify(obj));
+   req.send(JSON.stringify(obj));
+  };
+  navigator.geolocation.getCurrentPosition(function(pos) {
+   af.lat.value = pos.coords.latitude;
+   af.lon.value = pos.coords.longitude;
+  });
+  af.style.display = 'block';
   var h = document.createElement('h2');
   h.appendChild(document.createTextNode('Add places using the API'));
   tokenDiv.appendChild(h);
