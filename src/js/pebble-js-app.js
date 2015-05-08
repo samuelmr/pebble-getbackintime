@@ -152,7 +152,7 @@ function addLocation(position) {
       position.coords.longitude;
     var rgc = new XMLHttpRequest(); // xhr for reverse geocoding, only one instance!
     rgc.open("get", url, true);
-    rgc.setRequestHeader('User-Agent', 'Get Back in Time/1.4');
+    rgc.setRequestHeader('User-Agent', 'Get Back in Time/1.7');
     // rgc.setRequestHeader('X-Forwarded-For', token);
     rgc.onerror = rgc.ontimeout = function(e) {
       console.log("Reverse geocoding error: " + this.statusText);
@@ -160,8 +160,8 @@ function addLocation(position) {
     rgc.onload = function(res) {
       var json = this.responseText;
       console.log("Got: " + json + " from reverse geocoder");
-      var latlon = Math.round(position.coords.latitude*10000)/10000 + ',' +
-                   Math.round(position.coords.longitude*10000)/10000;
+      var latlon = Math.round(position.coords.latitude*1000)/1000 + ',' +
+                   Math.round(position.coords.longitude*1000)/1000;
       var obj = {
         "position": position,
         "pin": {
@@ -176,9 +176,13 @@ function addLocation(position) {
         }
       }
       var res = JSON.parse(json);
-      if (res && res.result && res.result[0] && res.result[0].name) {
-        console.log("Reverse geocoded address: " + res.result[0].name);
-        obj.pin.layout.title = res.result[0].name;
+      if (res && res.result && res.result[0]) {
+        var placeName = res.result[0].name || '';
+        if (!placeName && res.result[0].isIn) {
+          placeName = res.result[0].isIn;
+        }
+        console.log("Reverse geocoded address: " + placeName);
+        obj.pin.layout.title = placeName;
       };
       // add place to server
       var url = serverAddress + token + '/place/new';
