@@ -161,6 +161,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
         uint32_t id = launch_get_args();
         APP_LOG(APP_LOG_LEVEL_DEBUG, "Launched from timeline, pin ID: %lu", id);
         send_message(set_cmd, (int32_t) id);
+        hide_hint();
       }
     #endif
   }
