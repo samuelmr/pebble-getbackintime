@@ -81,7 +81,7 @@ var req = new XMLHttpRequest();
 req.onload = function() {
   console.log(this.responseText);
 };
-req.open("post", url, true);
+req.open("PUT", url, true);
 req.setRequestHeader('Content-Type: application/json');
 function success(position) {
   var obj = {"position": position};
