@@ -4,6 +4,9 @@ var lat1 = 0;
 var lon1 = 0;
 var lat2;
 var lon2;
+var speed = 0;
+var accuracy = 0;
+var phoneHead = 0;
 var prevHead = 0;
 var prevDist = 0;
 var head = 0;
@@ -139,6 +142,9 @@ function locationSuccess(position) {
   // position.coords.heading);
   lat1 = position.coords.latitude;
   lon1 = position.coords.longitude;
+  speed = position.coords.speed;
+  accuracy = position.coords.accuracy;
+  phoneHead = position.coords.heading;
   calculate();
 }
 
@@ -241,6 +247,9 @@ function calculate() {
     if ((dist != prevDist) || (head != prevHead)) {
       msg = {"dist": dist,
              "head": head,
+             "accuracy": accuracy,
+             "speed": speed,
+             "phonehead": phoneHead,
              "units": units,
              "sens": parseInt(sens)};
       sendMessage(msg);

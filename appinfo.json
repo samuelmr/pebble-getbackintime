@@ -1,11 +1,14 @@
 {
     "appKeys": {
+        "accuracy": 8,
         "cmd": 1,
         "dist": 3,
         "head": 2,
-        "units": 4,
+        "id": 6,
+        "phonehead": 9,
         "sens": 5,
-        "id": 6
+        "speed": 7,
+        "units": 4
     },
     "capabilities": [
         "location",
@@ -31,7 +34,6 @@
         "basalt"
     ],
     "uuid": "6f983a89-f645-4a11-aefd-3b84dd8946f0",
-    "versionCode": 1,
     "versionLabel": "1.7",
     "watchapp": {
         "watchface": false
