@@ -149,6 +149,17 @@ function locationSuccess(position) {
 }
 
 function addLocation(position) {
+  var pos = position;
+  if (JSON.stringify(pos) == "{}") {
+    // WTF: JSON.stringify(position) returns {}
+    // but position.coords.latitude and position.coords.longitude exist
+    pos = {
+      'coords': {
+        'latitude': position.coords.latitude,
+        'longitude': position.coords.longitude
+      }
+    };
+  }
   storeLocation(position);
   if (token && (token != '-')) {
     // get address
@@ -169,7 +180,7 @@ function addLocation(position) {
       var latlon = Math.round(position.coords.latitude*1000)/1000 + ',' +
                    Math.round(position.coords.longitude*1000)/1000;
       var obj = {
-        "position": position,
+        "position": pos,
         "pin": {
           "time": new Date().toISOString(),
           "layout": {
