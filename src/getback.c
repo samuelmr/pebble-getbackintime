@@ -5,6 +5,7 @@ static TextLayer *dist_layer;
 // static TextLayer *unit_layer;
 static TextLayer *hint_layer;
 static TextLayer *track_layer;
+static TextLayer *target_layer;
 static TextLayer *track_label_layer;
 static TextLayer *speed_layer;
 static TextLayer *speed_label_layer;
@@ -22,7 +23,7 @@ static TextLayer *calib_layer;
 */
 int32_t distance = 0;
 int16_t heading = 0;
-int16_t pheading = 0;
+int16_t pheading = -1;
 int16_t speed = 0;
 int16_t accuracy = 0;
 int16_t orientation = 0;
@@ -98,6 +99,11 @@ GColor get_bar_color(int val) {
 #endif
 }
 void compass_heading_handler(CompassHeadingData heading_data){
+  if (pheading >= 0) {
+    orientation = pheading;
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Orientation from phone heading: %d°", orientation);
+    return;
+  }
   switch (heading_data.compass_status) {
     case CompassStatusDataInvalid:
       text_layer_set_text(hint_layer, "Calibrating compass...");
@@ -108,31 +114,14 @@ void compass_heading_handler(CompassHeadingData heading_data){
       // snprintf(valid_buf, sizeof(valid_buf), "%s", "F");
       break;
     case CompassStatusCalibrated:
-      break;
       text_layer_set_text(hint_layer, default_hint_text);
-      // snprintf(valid_buf, sizeof(valid_buf), "%s", "");
+      // orientation = heading_data.true_heading;
+      orientation = 360 - TRIGANGLE_TO_DEG(heading_data.magnetic_heading);
+      // APP_LOG(APP_LOG_LEVEL_DEBUG, "Magnetic heading: %d°", orientation);
+      return;
   }
-  static char compassheading[2];
-  orientation = heading_data.true_heading;
-  snprintf(compassheading, sizeof(compassheading), "%d", orientation);
-  text_layer_set_text(track_layer, compassheading);
   layer_mark_dirty(head_layer);
   layer_mark_dirty(info_layer);
-/*
-  text_layer_set_text(calib_layer, valid_buf);
-  int32_t nx = center.x + 63 * sin_lookup(orientation)/TRIG_MAX_RATIO;
-  int32_t ny = center.y - 63 * cos_lookup(orientation)/TRIG_MAX_RATIO;
-  layer_set_frame((Layer *) n_layer, GRect(nx - 9, ny - 9, 18, 18));
-  int32_t ex = center.x + 63 * sin_lookup(orientation + TRIG_MAX_ANGLE/4)/TRIG_MAX_RATIO;
-  int32_t ey = center.y - 63 * cos_lookup(orientation + TRIG_MAX_ANGLE/4)/TRIG_MAX_RATIO;
-  layer_set_frame((Layer *) e_layer, GRect(ex - 9, ey - 9, 18, 18));
-  int32_t sx = center.x + 63 * sin_lookup(orientation + TRIG_MAX_ANGLE/2)/TRIG_MAX_RATIO;
-  int32_t sy = center.y - 63 * cos_lookup(orientation + TRIG_MAX_ANGLE/2)/TRIG_MAX_RATIO;
-  layer_set_frame((Layer *) s_layer, GRect(sx - 9, sy - 9, 18, 18));
-  int32_t wx = center.x + 63 * sin_lookup(orientation + TRIG_MAX_ANGLE*3/4)/TRIG_MAX_RATIO;
-  int32_t wy = center.y - 63 * cos_lookup(orientation + TRIG_MAX_ANGLE*3/4)/TRIG_MAX_RATIO;
-  layer_set_frame((Layer *) w_layer, GRect(wx - 9, wy - 9, 18, 18));
-*/
 }
 
 static void info_layer_update_callback(Layer *layer, GContext *ctx) {
@@ -142,15 +131,19 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
   // GRect bearing_box = GRect(1, 1, 42, 30);
   // graphics_draw_rect(ctx, bearing_box);
-  APP_LOG(APP_LOG_LEVEL_WARNING, "Heading: %d, orientation: %d", heading, orientation);
-  int bearing_diff = abs((int) (TRIGANGLE_TO_DEG(orientation) - heading));
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Heading: %d, orientation: %d", heading, orientation);
+  int bearing_diff = abs((int) (orientation - heading));
   if (bearing_diff > 180) {
     bearing_diff = 180 - (bearing_diff % 180);
   }
   int bearing_size = (int) bearing_diff / 6; // 180 degrees = 30 px (full height)
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Bearing diff: %d, size: %d", bearing_diff, bearing_size);
   GRect bearing_ind = GRect(42, bearing_size, 6, 30-bearing_size);
   graphics_context_set_fill_color(ctx, get_bar_color(30-bearing_size));
   graphics_fill_rect(ctx, bearing_ind, 0, GCornerNone);
+  static char bearing_text[6];
+  snprintf(bearing_text, sizeof(bearing_text), "%d°", orientation);
+  text_layer_set_text(track_layer, bearing_text);
 
   int speed_size = (int) speed * 2;
   if (speed_size > 30) {
@@ -171,7 +164,8 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
 }
 
 static void head_layer_update_callback(Layer *layer, GContext *ctx) {
-  gpath_rotate_to(head_path, (TRIG_MAX_ANGLE / 360) * (heading + TRIGANGLE_TO_DEG(orientation)));
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Heading: %d, orientation: %d", heading, orientation);
+  gpath_rotate_to(head_path, (TRIG_MAX_ANGLE / 360) * (heading - orientation));
   graphics_context_set_fill_color(ctx, GColorBlack);
 //   graphics_fill_circle(ctx, center, 77);
 //   graphics_context_set_fill_color(ctx, bg);
@@ -206,7 +200,7 @@ static void send_message(const char *cmd, int32_t id) {
   dict_write_int32(iter, ID_KEY, id);
   const uint32_t size = dict_write_end(iter);
   app_message_outbox_send();
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Sent command '%s' id '%ld' to phone! (%d bytes)", cmd, id, (int) size);
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Sent command '%s' id '%ld' to phone! (%ld bytes)", cmd, id, size);
 }
 
 static void reset_handler(ClickRecognizerRef recognizer, void *context) {
@@ -214,7 +208,7 @@ static void reset_handler(ClickRecognizerRef recognizer, void *context) {
   // hide_hint();
   text_layer_set_text(hint_layer, "Resetting target...");
   text_layer_set_text(dist_layer, "0");
-  text_layer_set_text(track_layer, "0");
+  text_layer_set_text(track_layer, "0°");
   send_message(set_cmd, -1); // current location
 }
 
@@ -284,13 +278,33 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   if (head_tuple) {
     heading = head_tuple->value->int16;
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated heading to %ld", heading);
+    static char target_text[6];
+    snprintf(target_text, sizeof(target_text), "%d°", heading);
+    text_layer_set_text(target_layer, target_text);
     layer_mark_dirty(head_layer);
   }
   Tuple *phead_tuple = dict_find(iter, PHONEHEAD_KEY);
   if (phead_tuple) {
-    pheading = head_tuple->value->int16;
+    pheading = phead_tuple->value->int16;
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated phone heading to %ld", pheading);
     layer_mark_dirty(head_layer);
+    layer_mark_dirty(info_layer);
+  }
+  Tuple *acc_tuple = dict_find(iter, ACCURACY_KEY);
+  if (acc_tuple) {
+    accuracy = acc_tuple->value->int16;
+    static char acc_text[6];
+    snprintf(acc_text, sizeof(acc_text), "%d m", (int) accuracy);
+    text_layer_set_text(acc_layer, acc_text);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated accuracy to %ld", accuracy);
+  }
+  Tuple *speed_tuple = dict_find(iter, SPEED_KEY);
+  if (speed_tuple) {
+    speed = speed_tuple->value->int16;
+    static char speed_text[6];
+    snprintf(speed_text, sizeof(speed_text), "%d", (int) speed);
+    text_layer_set_text(speed_layer, speed_text);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated speed to %ld", speed);
   }
   Tuple *units_tuple = dict_find(iter, UNITS_KEY);
   if (units_tuple) {
@@ -377,43 +391,8 @@ static void window_load(Window *window) {
   GPoint needle_axis = {bounds.size.w/2, 74};
   gpath_move_to(head_path, needle_axis);
   layer_add_child(window_layer, head_layer);
-
-/*
-  n_layer = text_layer_create(GRect(center.x-9, center.y-71, 18, 18));
-  text_layer_set_background_color(n_layer, GColorClear);
-  text_layer_set_text_color(n_layer, GColorWhite);
-  text_layer_set_font(n_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
-  text_layer_set_text_alignment(n_layer, GTextAlignmentCenter);
-  text_layer_set_text(n_layer, "N");
-  layer_add_child(head_layer, (Layer *) n_layer);
-
-  e_layer = text_layer_create(GRect(center.x+53, center.y-10, 18, 18));
-  text_layer_set_background_color(e_layer, GColorClear);
-  text_layer_set_text_color(e_layer, GColorWhite);
-  text_layer_set_font(e_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
-  text_layer_set_text_alignment(e_layer, GTextAlignmentCenter);
-  text_layer_set_text(e_layer, "E");
-  layer_add_child(head_layer, (Layer *) e_layer);
-
-  s_layer = text_layer_create(GRect(center.x-9, center.y+57, 18, 18));
-  text_layer_set_background_color(s_layer, GColorClear);
-  text_layer_set_text_color(s_layer, GColorWhite);
-  text_layer_set_font(s_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
-  text_layer_set_text_alignment(s_layer, GTextAlignmentCenter);
-  text_layer_set_text(s_layer, "S");
-  layer_add_child(head_layer, (Layer *) s_layer);
-
-  w_layer = text_layer_create(GRect(center.x-71, center.y-9, 18, 18));
-  text_layer_set_background_color(w_layer, GColorClear);
-  text_layer_set_text_color(w_layer, GColorWhite);
-  text_layer_set_font(w_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
-  text_layer_set_text_alignment(w_layer, GTextAlignmentCenter);
-  text_layer_set_text(w_layer, "W");
-  layer_add_child(head_layer, text_layer_get_layer(w_layer));
-*/
   
   dist_layer = text_layer_create(GRect(0, bounds.size.h-49, bounds.size.w, 35));
-  text_layer_set_background_color(dist_layer, GColorClear);
   text_layer_set_font(dist_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_color(dist_layer, GColorBlack);
   text_layer_set_background_color(dist_layer, GColorClear);
@@ -421,21 +400,13 @@ static void window_load(Window *window) {
   text_layer_set_text(dist_layer, "");
   layer_add_child(window_layer, text_layer_get_layer(dist_layer));
   
-/*
-  unit_layer = text_layer_create(GRect(50, 84, 44, 30));
-  text_layer_set_background_color(unit_layer, GColorClear);
-  text_layer_set_font(unit_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
-  text_layer_set_text_alignment(unit_layer, GTextAlignmentCenter);
-  text_layer_set_text(unit_layer, "");
-  layer_add_child(window_layer, text_layer_get_layer(unit_layer));
-
-  calib_layer = text_layer_create(GRect(129, 129, 14, 14));
-  text_layer_set_background_color(calib_layer, GColorClear);
-  text_layer_set_font(calib_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD));
-  text_layer_set_text_alignment(calib_layer, GTextAlignmentCenter);
-  text_layer_set_text(calib_layer, "C");
-  layer_add_child(window_layer, text_layer_get_layer(calib_layer));
-*/
+  target_layer = text_layer_create(GRect(0, 32, 48, 35));
+  text_layer_set_font(target_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
+  text_layer_set_text_color(target_layer, GColorBlack);
+  text_layer_set_background_color(target_layer, GColorClear);
+  text_layer_set_text_alignment(target_layer, GTextAlignmentCenter);
+  text_layer_set_text(target_layer, "");
+  layer_add_child(window_layer, text_layer_get_layer(target_layer));
   
   hint_layer_size = GRect(0, bounds.size.h-15, bounds.size.w, 15);
   hint_layer = text_layer_create(hint_layer_size);
@@ -499,19 +470,13 @@ static void window_unload(Window *window) {
   layer_destroy(head_layer);
   // text_layer_destroy(unit_layer);
   text_layer_destroy(dist_layer);
+  text_layer_destroy(target_layer);
   text_layer_destroy(track_layer);
   text_layer_destroy(track_label_layer);
   text_layer_destroy(speed_layer);
   text_layer_destroy(speed_label_layer);
   text_layer_destroy(acc_layer);
   text_layer_destroy(acc_label_layer);
-/*
-  text_layer_destroy(calib_layer);
-  text_layer_destroy(w_layer);
-  text_layer_destroy(s_layer);
-  text_layer_destroy(e_layer);
-  text_layer_destroy(n_layer);
-*/
   if (hint_layer) {
     text_layer_destroy(hint_layer);
   }
@@ -520,15 +485,12 @@ static void window_unload(Window *window) {
 static void init(void) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Launch reason: %d", launch_reason());
   #ifdef PBL_COLOR
-    // approaching = GColorMalachite;
-    // receding = GColorFolly;
     approaching = GColorMintGreen;
     receding = GColorSunsetOrange;
   #else
     approaching = GColorWhite;
     receding = GColorWhite;
   #endif
-  // bg = GColorWhite;
   compass_service_set_heading_filter(TRIG_MAX_ANGLE*sensitivity/360);
   compass_service_subscribe(&compass_heading_handler);
   app_message_register_inbox_received(in_received_handler);
