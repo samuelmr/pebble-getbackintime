@@ -244,14 +244,22 @@ function calculate() {
     var x = Math.cos(l1)*Math.sin(l2) -
             Math.sin(l1)*Math.cos(l2)*Math.cos(dLon);
     head = toDeg(Math.round(Math.atan2(y, x)));
+    if (head < 360) {
+      head = (head % 360) + 360;
+    }
     if ((dist != prevDist) || (head != prevHead)) {
       msg = {"dist": dist,
              "head": head,
              "accuracy": accuracy,
-             "speed": speed,
-             "phonehead": phoneHead,
+             "phonehead": -1,
+             "speed": 0,
              "units": units,
              "sens": parseInt(sens)};
+      if ((speed > 0) && (!isNan(phoneHead))) {
+        // enough movement to calculate speed and heading
+        msg["phonehead"] = phoneHead;
+        msg["speed"] = speed;
+      }
       sendMessage(msg);
       prevDist = dist;
       prevHead = head;
