@@ -184,11 +184,39 @@ app.get('/:userToken/place/:id', function(req, res) {
 });
 
 app.get('/:userToken/configure', function(req, res) {
-  var context = {'token': req.params.userToken,
-                 'return_to': req.param.return_to || 'pebblejs://close#'};
+  var userToken = req.params.userToken;
+  var context = {'token': userToken,
+                 'return_to': req.param.return_to || 'pebblejs://close#',
+                 'history': []};
   if (req.param.conf) {
     context.conf = JSON.parse(req.param.conf);
   }
+  MongoClient.connect(mongoUri, function(err, db) {
+    if (err) {
+      console.warn('Failed to open db connection: ' + err);
+      res.status(400);
+      res.send('Failed to open db connection: ' + err);
+      return;
+    }
+    db.collection('places', function(er, collection) {
+      collection.find({user: userToken}, function(err, cursor) {
+        if (err) {
+          res.status(400);
+          res.send('Failed to retrieve place from db: ' + err);
+          return;
+        }
+        // console.log(doc);
+        cursor.each(function(err, doc) {
+          if (err) {
+            res.status(400);
+            res.send('Failed to retrieve place from db: ' + err);
+            return;
+          }
+          context.history.push(doc);
+        });
+      });
+    });
+  });  
   res.render('configure', context);
 });
 
