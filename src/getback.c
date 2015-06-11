@@ -98,6 +98,9 @@ GColor get_bar_color(int val) {
   return(GColorWhite);
 #endif
 }
+static void reset_dist_bg(void *data) {
+  text_layer_set_background_color(dist_layer, GColorClear);
+}
 void compass_heading_handler(CompassHeadingData heading_data){
   if (pheading >= 0) {
     orientation = pheading;
@@ -167,26 +170,8 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
   // APP_LOG(APP_LOG_LEVEL_DEBUG, "Heading: %d, orientation: %d", heading, orientation);
   gpath_rotate_to(head_path, (TRIG_MAX_ANGLE / 360) * (heading - orientation));
   graphics_context_set_fill_color(ctx, GColorBlack);
-//   graphics_fill_circle(ctx, center, 77);
-//   graphics_context_set_fill_color(ctx, bg);
   gpath_draw_filled(ctx, head_path);
-//  graphics_fill_circle(ctx, center, 49);
-//  graphics_context_set_fill_color(ctx, GColorBlack);
 }
-
-/*
-static void show_hint(void) {
-  if (hint_layer) {
-    layer_set_hidden(text_layer_get_layer(hint_layer), false);
-  }
-}
-
-static void hide_hint(void) {
-  if (hint_layer) {
-    layer_set_hidden(text_layer_get_layer(hint_layer), true);
-  }
-}
-*/
 
 static void send_message(const char *cmd, int32_t id) {
   DictionaryIterator *iter;
@@ -214,26 +199,11 @@ static void reset_handler(ClickRecognizerRef recognizer, void *context) {
 
 static void hint_handler(ClickRecognizerRef recognizer, void *context) {
   text_layer_set_text(hint_layer, default_hint_text);
-/*
-  if (layer_get_hidden(text_layer_get_layer(hint_layer))) {
-    show_hint();
-  }
-  else {
-    hide_hint();
-  }  
-*/
 }  
 
 void out_sent_handler(DictionaryIterator *sent, void *context) {
    // outgoing message was delivered
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Message accepted by phone!");
-/*
-  Layer *window_layer = window_get_root_layer(window);
-  hint_layer = text_layer_create(hint_layer_size);
-  text_layer_set_font(hint_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-  text_layer_set_text_alignment(hint_layer, GTextAlignmentCenter);
-  layer_add_child(window_layer, text_layer_get_layer(hint_layer));
-*/
   text_layer_set_text(hint_layer, "Target set.");
   vibes_short_pulse();
 }
@@ -242,13 +212,6 @@ void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, voi
    // outgoing message failed
   APP_LOG(APP_LOG_LEVEL_WARNING, "Message rejected by phone: %d", reason);
   if (reason == APP_MSG_SEND_TIMEOUT) {
-/*
-    Layer *window_layer = window_get_root_layer(window);
-    hint_layer = text_layer_create(hint_layer_size);
-    text_layer_set_font(hint_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
-    text_layer_set_text_alignment(hint_layer, GTextAlignmentCenter);
-    layer_add_child(window_layer, text_layer_get_layer(hint_layer));
-*/
     text_layer_set_text(hint_layer, "Phone connection timeout!");
   }
   else {
@@ -316,33 +279,31 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     // hide_hint();
     if (dist_tuple->value->int32 > distance) {
       text_layer_set_background_color(dist_layer, receding);
+      app_timer_register(4000, reset_dist_bg, NULL);
     }
     else if (dist_tuple->value->int32 < distance) {
       text_layer_set_background_color(dist_layer, approaching);
+      app_timer_register(4000, reset_dist_bg, NULL);
     }
     else {
-      text_layer_set_background_color(dist_layer, GColorClear);
+      reset_dist_bg(NULL);
     }
     distance = dist_tuple->value->int32;
   }
   if (strcmp(units, "imperial") == 0) {
-    // text_layer_set_text(unit_layer, "yd");
     unit = "yd";
     distance = distance / YARD_LENGTH;
   }
   else {
-    // text_layer_set_text(unit_layer, "m");
     unit = "m";
   }
   if (distance > 2900) {
     if (strcmp(units, "imperial") == 0) {
       distance = (int) (distance / YARDS_IN_MILE);
-      // text_layer_set_text(unit_layer, "mi");
       unit = "mi";
     }
     else {
       distance = (int) (distance / 1000);
-      // text_layer_set_text(unit_layer, "km");
       unit = "km";
     }
   }
