@@ -62,7 +62,7 @@ function pushPin(place, res) {
         {
           "layout": {
             "type": "genericNotification",
-            "title": "Get Back target",
+            "title": pin.layout.title || "Get Back target",
             "tinyIcon": "system://images/NOTIFICATION_FLAG",
             "body": "A new target added from watch."
           }
