@@ -254,9 +254,9 @@ function calculate() {
     var y = Math.sin(dLon) * Math.cos(l2);
     var x = Math.cos(l1)*Math.sin(l2) -
             Math.sin(l1)*Math.cos(l2)*Math.cos(dLon);
-    head = toDeg(Math.round(Math.atan2(y, x)));
-    if (head < 360) {
-      head = (head % 360) + 360;
+    head = toDeg(Math.round(Math.atan2(y, x))) % 360;
+    if (head < 0) {
+      head += 360;
     }
     if ((dist != prevDist) || (head != prevHead)) {
       msg = {"dist": dist,
