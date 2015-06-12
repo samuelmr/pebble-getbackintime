@@ -14,13 +14,6 @@ static TextLayer *acc_label_layer;
 static Layer *head_layer;
 static Layer *info_layer;
 static char *default_hint_text = "Long press UP to set target.";
-/*
-static TextLayer *n_layer;
-static TextLayer *e_layer;
-static TextLayer *s_layer;
-static TextLayer *w_layer;
-static TextLayer *calib_layer;
-*/
 int32_t distance = 0;
 int16_t heading = 0;
 int16_t pheading = -1;
@@ -46,6 +39,7 @@ static GRect hint_layer_size;
 static const double YARD_LENGTH = 0.9144;
 static const double YARDS_IN_MILE = 1760;
 GPoint center;
+AppTimer *current_timer;
 
 GColor approaching;
 GColor receding;
@@ -102,26 +96,27 @@ static void reset_dist_bg(void *data) {
   text_layer_set_background_color(dist_layer, GColorClear);
 }
 void compass_heading_handler(CompassHeadingData heading_data){
-  if (pheading >= 0) {
-    orientation = pheading;
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Orientation from phone heading: %d°", orientation);
-    return;
-  }
   switch (heading_data.compass_status) {
     case CompassStatusDataInvalid:
       text_layer_set_text(hint_layer, "Calibrating compass...");
       // snprintf(valid_buf, sizeof(valid_buf), "%s", "C");
-      return;
+      break;
     case CompassStatusCalibrating:
       text_layer_set_text(hint_layer, "Fine tuning compass...");
       // snprintf(valid_buf, sizeof(valid_buf), "%s", "F");
       break;
     case CompassStatusCalibrated:
-      text_layer_set_text(hint_layer, default_hint_text);
+      if (strcmp(text_layer_get_text(hint_layer), "Fine tuning compass...") == 0) {
+        text_layer_set_text(hint_layer, default_hint_text);
+      }
       // orientation = heading_data.true_heading;
-      orientation = 360 - TRIGANGLE_TO_DEG(heading_data.magnetic_heading);
+      orientation = (360 - TRIGANGLE_TO_DEG(heading_data.magnetic_heading))%360;
       // APP_LOG(APP_LOG_LEVEL_DEBUG, "Magnetic heading: %d°", orientation);
       return;
+  }
+  if (pheading >= 0) {
+    orientation = pheading%360;
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Orientation from phone heading: %d°", orientation);
   }
   layer_mark_dirty(head_layer);
   layer_mark_dirty(info_layer);
@@ -277,13 +272,16 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   Tuple *dist_tuple = dict_find(iter, DIST_KEY);
   if (dist_tuple) {
     // hide_hint();
+    if (current_timer) {
+      app_timer_cancel(current_timer);
+    }
     if (dist_tuple->value->int32 > distance) {
       text_layer_set_background_color(dist_layer, receding);
-      app_timer_register(4000, reset_dist_bg, NULL);
+      current_timer = app_timer_register(4000, reset_dist_bg, NULL);
     }
     else if (dist_tuple->value->int32 < distance) {
       text_layer_set_background_color(dist_layer, approaching);
-      app_timer_register(4000, reset_dist_bg, NULL);
+      current_timer = app_timer_register(4000, reset_dist_bg, NULL);
     }
     else {
       reset_dist_bg(NULL);
