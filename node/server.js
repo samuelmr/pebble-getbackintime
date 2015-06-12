@@ -35,7 +35,7 @@ function pushPin(place, res) {
      pin = new Timeline.Pin(place.pin);
     }
     catch(e) {
-      console.log('Failed to create pin: ' + e);
+      console.warn('Failed to create pin: ' + e);
       res.status(400);
       res.send('Failed to create pin: ' + e);
       return;
@@ -58,10 +58,22 @@ function pushPin(place, res) {
     type: Timeline.Pin.ActionType.OPEN_WATCH_APP,
     launchCode: place._id
   }));
+  pin.createNotification = new Timeline.Pin.Notification(
+        {
+          "layout": {
+            "type": "genericNotification",
+            "title": "Get Back target",
+            "tinyIcon": "system://images/NOTIFICATION_FLAG",
+            "body": "A new target added from watch."
+          }
+        }
+      );
+
   place.pin = pin;
+  console.log('Sending pin: ' + JSON.stringify(pin));
   timeline.sendUserPin(place.user, pin, function (err, body, resp) {
     if(err) {
-      console.log('Failed to push pin to timeline: ' + err);
+      console.warn('Failed to push pin to timeline: ' + err);
       res.status(400);
       res.send('Failed to push pin to timeline: ' + err);
     }
@@ -82,10 +94,9 @@ app.post('/:userToken/place/new', function(req, res) {
   // if id is specified in params try to use it as mondodb id
   // otherwise create a new id, just use milliseconds since a nearby epoch...
   // This may result to duplicates!
-  place._id = parseInt(place.id) || new Date().getTime() - 1430000000000;
+  place._id = parseInt(place.id) || new Date().getTime() - 1434000000000;
   var pos = place.position; // || {};
   if (!pos || !pos.coords || !pos.coords.latitude || !pos.coords.longitude) {
-/*
     if (req.param('latitude') && req.param('longitude')) {
       pos.coords = {
         'latitude': req.param('latitude'),
@@ -94,15 +105,12 @@ app.post('/:userToken/place/new', function(req, res) {
       place.pos = pos;
     }
     else {
-*/
       var errorText = 'No coordinates found in parameters!';
       console.warn(errorText);
       res.status(400);
       res.send(errorText);
       return;
-/*
     }
-*/
   }
 
   // store place to db
