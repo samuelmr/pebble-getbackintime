@@ -169,6 +169,8 @@ void compass_heading_handler(CompassHeadingData heading_data){
       // orientation = heading_data.true_heading;
       orientation = (360 - TRIGANGLE_TO_DEG(heading_data.magnetic_heading))%360;
       // APP_LOG(APP_LOG_LEVEL_DEBUG, "Magnetic heading: %d°", orientation);
+      layer_mark_dirty(head_layer);
+      layer_mark_dirty(info_layer);
       return;
   }
   show_hint(2);
@@ -211,7 +213,6 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
   GRect acc_ind = GRect(138, acc_size, 6, 30-acc_size);
   graphics_context_set_fill_color(ctx, get_bar_color(30-acc_size));
   graphics_fill_rect(ctx, acc_ind, 0, GCornerNone);
-
 }
 
 static void head_layer_update_callback(Layer *layer, GContext *ctx) {
@@ -254,7 +255,14 @@ void hide_menu() {
 }
 
 void back_button_handler(ClickRecognizerRef recognizer, void *context) {
-  hide_menu();
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Back pushed");
+  if (layer_get_hidden(menu_layer_get_layer(menu_layer)) == false) {
+    hide_menu();
+  }
+  else {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Destroy window");
+    window_stack_pop(true);
+  }
 }
 
 void new_ccp(void *context) {
@@ -472,6 +480,7 @@ static void click_config_provider(void *context) {
   // window_long_click_subscribe(BUTTON_ID_UP, 0, reset_handler, NULL);
   window_single_click_subscribe(BUTTON_ID_DOWN, next_hint_handler);
   // window_long_click_subscribe(BUTTON_ID_DOWN, 0, reset_handler, NULL);
+  window_single_click_subscribe(BUTTON_ID_BACK, back_button_handler);
 }
 
 static void window_load(Window *window) {
