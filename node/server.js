@@ -47,7 +47,7 @@ function createId() {
     d.getMinutes() * 60 * 100 +
     d.getSeconds() * 100 +
     Math.floor(d.getMilliseconds()/10);
-  return '' + dayOfYear.toString() + cs;
+  return parseInt('' + dayOfYear.toString() + cs);
 }
 
 function pushPin(place, res) {
@@ -162,7 +162,7 @@ app.post('/:userToken/place/new', function(req, res) {
       collection.insert(place, {safe: true}, function(err, result) {
         if (err || !result) {
           if (err.code == 11000) {
-            console.warn('Failed to save place into db: ' + err);
+            console.warn('Failed to save place into db: ' + err + ', Retrying...');
             place._id++;
             // just one retry, no infinite loop...
             collection.insert(place, {safe: true}, function(err, result) {
