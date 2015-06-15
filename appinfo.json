@@ -1,20 +1,24 @@
 {
     "appKeys": {
-        "accuracy": 8,
         "cmd": 1,
-        "dist": 3,
         "head": 2,
-        "id": 6,
-        "phonehead": 9,
+        "dist": 3,
+        "units": 4,
         "sens": 5,
+        "id": 6,
         "speed": 7,
-        "units": 4
+        "accuracy": 8,
+        "phonehead": 9,
+        "count": 10,
+        "index": 11,
+        "title": 12,
+        "subtitle": 13
     },
     "capabilities": [
         "location",
         "configurable"
     ],
-    "companyName": "Samuel Rinnetm\u00e4ki",
+    "companyName": "Samuel Rinnetmäki",
     "longName": "Get Back in Time",
     "projectType": "native",
     "resources": {
@@ -34,7 +38,7 @@
         "basalt"
     ],
     "uuid": "6f983a89-f645-4a11-aefd-3b84dd8946f0",
-    "versionLabel": "2.1",
+    "versionLabel": "2.2",
     "watchapp": {
         "watchface": false
     }

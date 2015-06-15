@@ -1,5 +1,8 @@
 #include <pebble.h>
 
+#define MAX_PLACE_COUNT 20
+#define MAX_HINT_COUNT 5
+
 static Window *window;
 static TextLayer *dist_layer;
 // static TextLayer *unit_layer;
@@ -13,37 +16,54 @@ static TextLayer *acc_layer;
 static TextLayer *acc_label_layer;
 static Layer *head_layer;
 static Layer *info_layer;
-static char *default_hint_text = "Long press UP to set target.";
+char *hints[MAX_HINT_COUNT];
+int current_hint = 0;
 int32_t distance = 0;
 int16_t heading = 0;
 int16_t pheading = -1;
 int16_t speed = 0;
 int16_t accuracy = 0;
 int16_t orientation = 0;
+static int16_t history_count = 0;
 // update screen only when heading changes at least <sensitivity> degrees
 // this is overridden by settings
 int sensitivity = 1;
-static const uint32_t CMD_KEY = 0x1;
-static const uint32_t HEAD_KEY = 0x2;
-static const uint32_t DIST_KEY = 0x3;
-static const uint32_t UNITS_KEY = 0x4;
-static const uint32_t SENS_KEY = 0x5;
-static const uint32_t ID_KEY = 0x6;
-static const uint32_t SPEED_KEY = 0x7;
-static const uint32_t ACCURACY_KEY = 0x8;
-static const uint32_t PHONEHEAD_KEY = 0x9;
+static const uint32_t CMD_KEY = 1;
+static const uint32_t HEAD_KEY = 2;
+static const uint32_t DIST_KEY = 3;
+static const uint32_t UNITS_KEY = 4;
+static const uint32_t SENS_KEY = 5;
+static const uint32_t ID_KEY = 6;
+static const uint32_t SPEED_KEY = 7;
+static const uint32_t ACCURACY_KEY = 8;
+static const uint32_t PHONEHEAD_KEY = 9;
+static const uint32_t COUNT_KEY = 10;
+static const uint32_t INDEX_KEY = 11;
+static const uint32_t TITLE_KEY = 12;
+static const uint32_t SUBTITLE_KEY = 13;
 static const char *set_cmd = "set";
 static const char *quit_cmd = "quit";
 static GPath *head_path;
 static GRect hint_layer_size;
 static const double YARD_LENGTH = 0.9144;
 static const double YARDS_IN_MILE = 1760;
-GPoint center;
 AppTimer *current_timer;
+static MenuLayer *menu_layer;
+ClickConfigProvider previous_ccp;
 
 GColor approaching;
 GColor receding;
 GColor bg;
+
+static void click_config_provider(void *context);
+
+typedef struct{
+  uint32_t id;
+  char title[30];
+  char subtitle[30];
+} Place;
+
+Place places[MAX_PLACE_COUNT];
 
 const GPathInfo HEAD_PATH_POINTS = {
   7,
@@ -92,28 +112,66 @@ GColor get_bar_color(int val) {
   return(GColorWhite);
 #endif
 }
+
 static void reset_dist_bg(void *data) {
   text_layer_set_background_color(dist_layer, GColorClear);
 }
+
+static void show_hint(int index) {
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing hint: %d", index);  
+  if (hints[index]) {
+    text_layer_set_text(hint_layer, hints[index]);
+    current_hint = index;
+  }
+}
+
+static void prev_hint_handler(ClickRecognizerRef recognizer, void *context) {
+  current_hint--;
+  if (current_hint < 0) {
+    current_hint = MAX_HINT_COUNT - 1;
+  }
+  if (!hints[current_hint]) {
+    prev_hint_handler(recognizer, context);
+  }
+  else {
+    show_hint(current_hint);
+  }
+}
+
+static void next_hint_handler(ClickRecognizerRef recognizer, void *context) {
+  ++current_hint;
+  if (current_hint >= MAX_HINT_COUNT) {
+    current_hint = 0;
+  }
+  if (!hints[current_hint]) {
+    next_hint_handler(recognizer, context);
+  }
+  else {
+    show_hint(current_hint);
+  }
+}
+
 void compass_heading_handler(CompassHeadingData heading_data){
   switch (heading_data.compass_status) {
     case CompassStatusDataInvalid:
-      text_layer_set_text(hint_layer, "Calibrating compass...");
+      hints[2] = "Calibrating compass...";
       // snprintf(valid_buf, sizeof(valid_buf), "%s", "C");
       break;
     case CompassStatusCalibrating:
-      text_layer_set_text(hint_layer, "Fine tuning compass...");
+      hints[2] = "Fine tuning compass...";
       // snprintf(valid_buf, sizeof(valid_buf), "%s", "F");
       break;
     case CompassStatusCalibrated:
+      hints[2] = "Compass calibrated";
       if (strcmp(text_layer_get_text(hint_layer), "Fine tuning compass...") == 0) {
-        text_layer_set_text(hint_layer, default_hint_text);
+        text_layer_set_text(hint_layer, hints[0]);
       }
       // orientation = heading_data.true_heading;
       orientation = (360 - TRIGANGLE_TO_DEG(heading_data.magnetic_heading))%360;
       // APP_LOG(APP_LOG_LEVEL_DEBUG, "Magnetic heading: %d°", orientation);
       return;
   }
+  show_hint(2);
   if (pheading >= 0) {
     orientation = pheading%360;
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Orientation from phone heading: %d°", orientation);
@@ -125,17 +183,12 @@ void compass_heading_handler(CompassHeadingData heading_data){
 static void info_layer_update_callback(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
   graphics_context_set_fill_color(ctx, GColorBlack);
-  // graphics_context_set_stroke_color(ctx, GColorWhite);
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
-  // GRect bearing_box = GRect(1, 1, 42, 30);
-  // graphics_draw_rect(ctx, bearing_box);
-  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Heading: %d, orientation: %d", heading, orientation);
   int bearing_diff = abs((int) (orientation - heading));
   if (bearing_diff > 180) {
     bearing_diff = 180 - (bearing_diff % 180);
   }
   int bearing_size = (int) bearing_diff / 6; // 180 degrees = 30 px (full height)
-  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Bearing diff: %d, size: %d", bearing_diff, bearing_size);
   GRect bearing_ind = GRect(42, bearing_size, 6, 30-bearing_size);
   graphics_context_set_fill_color(ctx, get_bar_color(30-bearing_size));
   graphics_fill_rect(ctx, bearing_ind, 0, GCornerNone);
@@ -162,7 +215,6 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
 }
 
 static void head_layer_update_callback(Layer *layer, GContext *ctx) {
-  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Heading: %d, orientation: %d", heading, orientation);
   gpath_rotate_to(head_path, (TRIG_MAX_ANGLE / 360) * (heading - orientation));
   graphics_context_set_fill_color(ctx, GColorBlack);
   gpath_draw_filled(ctx, head_path);
@@ -173,67 +225,127 @@ static void send_message(const char *cmd, int32_t id) {
   app_message_outbox_begin(&iter);
   if (iter == NULL) {
     APP_LOG(APP_LOG_LEVEL_WARNING, "Can not send command %s to phone!", cmd);
-    text_layer_set_text(hint_layer, "Phone connection failed!");
+    hints[4] = "Phone connection failed!";
+    show_hint(4);
     return;
+  }
+  else {
+    hints[4] = NULL;
   }
   dict_write_cstring(iter, CMD_KEY, cmd);
   dict_write_int32(iter, ID_KEY, id);
-  const uint32_t size = dict_write_end(iter);
+  dict_write_end(iter);
   app_message_outbox_send();
-  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Sent command '%s' id '%ld' to phone! (%ld bytes)", cmd, id, size);
 }
 
 static void reset_handler(ClickRecognizerRef recognizer, void *context) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Reset");
-  // hide_hint();
-  text_layer_set_text(hint_layer, "Resetting target...");
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Reset");
+  hints[3] = "Resetting target...";
+  show_hint(3);
   text_layer_set_text(dist_layer, "0");
   text_layer_set_text(track_layer, "0°");
   send_message(set_cmd, -1); // current location
 }
 
-static void hint_handler(ClickRecognizerRef recognizer, void *context) {
-  text_layer_set_text(hint_layer, default_hint_text);
-}  
+void hide_menu() {
+  layer_set_hidden(menu_layer_get_layer(menu_layer), true);
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Hide menu, %d items!", history_count);
+  window_set_click_config_provider(window, click_config_provider);
+}
+
+void back_button_handler(ClickRecognizerRef recognizer, void *context) {
+  hide_menu();
+}
+
+void new_ccp(void *context) {
+  previous_ccp(context);
+  window_single_click_subscribe(BUTTON_ID_BACK, back_button_handler);
+}
+
+void force_back_button(Window *window, MenuLayer *menu_layer) {
+  previous_ccp = window_get_click_config_provider(window);
+  window_set_click_config_provider_with_context(window, new_ccp, menu_layer);
+}
+
+void show_menu() {
+  menu_layer_reload_data(menu_layer);
+  layer_mark_dirty(menu_layer_get_layer(menu_layer)); // unnecessary?
+  layer_set_hidden(menu_layer_get_layer(menu_layer), false);
+  menu_layer_set_click_config_onto_window(menu_layer, window);
+  force_back_button(window, menu_layer);
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Show menu, %d items!", history_count);
+}
+
+static void menu_show_handler(ClickRecognizerRef recognizer, void *context) {
+  if (layer_get_hidden(menu_layer_get_layer(menu_layer)) == true) {
+    show_menu();
+  }
+  else {
+    hide_menu();
+  }
+}
 
 void out_sent_handler(DictionaryIterator *sent, void *context) {
-   // outgoing message was delivered
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Message accepted by phone!");
-  text_layer_set_text(hint_layer, "Target set.");
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Message accepted by phone!");
+  hints[3] = "Target set";
+  hints[4] = NULL;
+  show_hint(3);
   vibes_short_pulse();
 }
 
 void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, void *context) {
-   // outgoing message failed
   APP_LOG(APP_LOG_LEVEL_WARNING, "Message rejected by phone: %d", reason);
   if (reason == APP_MSG_SEND_TIMEOUT) {
-    text_layer_set_text(hint_layer, "Phone connection timeout!");
+    hints[4] = "Phone connection timeout!";
   }
   else {
-    text_layer_set_text(hint_layer, "Phone connection failed!");
+    hints[4] = "Phone connection failed!";
   }
+  show_hint(4);
 }
 
 void in_received_handler(DictionaryIterator *iter, void *context) {
-  // incoming message received
-  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Got message from phone!");
+  hints[4] = NULL;
+  Tuple *count_tuple = dict_find(iter, COUNT_KEY);
+  if (count_tuple) {
+    history_count = count_tuple->value->int8;
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Found %d places in history", history_count);
+    if (history_count > MAX_PLACE_COUNT) {
+      history_count = MAX_PLACE_COUNT;
+    }
+    Tuple *index_tuple = dict_find(iter, INDEX_KEY);
+    int place_index = index_tuple->value->int8;
+    Place *place = &places[place_index];
+    Tuple *id_tuple = dict_find(iter, ID_KEY);
+    place->id = id_tuple->value->uint32;
+    Tuple *title_tuple = dict_find(iter, TITLE_KEY);
+    strcpy(place->title, title_tuple->value->cstring);
+    Tuple *subtitle_tuple = dict_find(iter, SUBTITLE_KEY);
+    strcpy(place->subtitle, subtitle_tuple->value->cstring);
+    layer_mark_dirty(menu_layer_get_layer(menu_layer));
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Found places %lu (%d): %s/%s", place->id, place_index, place->title, place->subtitle);
+  }
+
   Tuple *id_tuple = dict_find(iter, ID_KEY);
   if (id_tuple) {
     // what's the best way to find out if launch_get_args is supported?
-    #ifdef PBL_PLATFORM_BASALT
-      if(launch_reason() == APP_LAUNCH_TIMELINE_ACTION) {
-        uint32_t id = launch_get_args();
-        APP_LOG(APP_LOG_LEVEL_DEBUG, "Launched from timeline, pin ID: %lu", id);
-        send_message(set_cmd, (int32_t) id);
-        text_layer_set_text(hint_layer, "Getting target information...");
-        // hide_hint();
-      }
-    #endif
+#ifdef PBL_PLATFORM_BASALT
+    int32_t idval = id_tuple->value->int32;
+    if ((idval < 0) && (launch_reason() == APP_LAUNCH_TIMELINE_ACTION)) {
+      uint32_t id = launch_get_args();
+      // APP_LOG(APP_LOG_LEVEL_DEBUG, "Launched from timeline, pin ID: %lu", id);
+      send_message(set_cmd, (int32_t) id);
+      hints[3] = "Getting target information...";
+      show_hint(3);
+    }
+#endif
   }
   static char units[9];
   static char *unit = "--";
+
   Tuple *head_tuple = dict_find(iter, HEAD_KEY);
   if (head_tuple) {
+    hints[3] = "Target set";
     heading = head_tuple->value->int16;
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated heading to %ld", heading);
     static char target_text[6];
@@ -271,7 +383,6 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   }
   Tuple *dist_tuple = dict_find(iter, DIST_KEY);
   if (dist_tuple) {
-    // hide_hint();
     if (current_timer) {
       app_timer_cancel(current_timer);
     }
@@ -316,28 +427,56 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   static char dist_text[9];
   snprintf(dist_text, sizeof(dist_text), "%d %s", (int) distance, unit);
   text_layer_set_text(dist_layer, dist_text);
-  text_layer_set_text(hint_layer, default_hint_text);
+  show_hint(0);
   // APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance updated: %d %s", (int) distance, text_layer_get_text(unit_layer));
 }
 
 void in_dropped_handler(AppMessageResult reason, void *context) {
   // incoming message dropped
-  APP_LOG(APP_LOG_LEVEL_WARNING, "Could not handle message from phone: %d", reason);
+  APP_LOG(APP_LOG_LEVEL_WARNING, "Could not handle message from phone: %d, %d", reason, APP_MSG_INVALID_ARGS);
 }
- 
+
+static uint16_t menu_get_num_sections_callback(MenuLayer *menu_layer, void *data) {
+  return 1;
+}
+
+static uint16_t menu_get_num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
+  return history_count;
+}
+
+static int16_t menu_get_header_height_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu header height: %d", MENU_CELL_BASIC_HEADER_HEIGHT);
+  return MENU_CELL_BASIC_HEADER_HEIGHT;
+}
+
+static void menu_draw_header_callback(GContext* ctx, const Layer *cell_layer, uint16_t section_index, void *data) {
+  menu_cell_basic_header_draw(ctx, cell_layer, "Place history");
+}
+
+static void menu_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index, void *data) {
+  Place *place = &places[cell_index->row];
+  menu_cell_basic_draw(ctx, cell_layer, place->title, place->subtitle, NULL);
+}
+
+void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *data) {
+  Place *place = &places[cell_index->row];
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Getting info for history place %lu", place->id);
+  send_message(set_cmd, place->id);
+  hide_menu();
+}
+
 static void click_config_provider(void *context) {
-  window_single_click_subscribe(BUTTON_ID_SELECT, hint_handler);
-  window_single_click_subscribe(BUTTON_ID_UP, hint_handler);
-  window_single_click_subscribe(BUTTON_ID_DOWN, hint_handler);
-  // window_long_click_subscribe(BUTTON_ID_SELECT, 0, reset_handler, NULL);
-  window_long_click_subscribe(BUTTON_ID_UP, 0, reset_handler, NULL);
+  window_single_click_subscribe(BUTTON_ID_SELECT, menu_show_handler);
+  window_single_click_subscribe(BUTTON_ID_UP, prev_hint_handler);
+  window_long_click_subscribe(BUTTON_ID_SELECT, 0, reset_handler, NULL);
+  // window_long_click_subscribe(BUTTON_ID_UP, 0, reset_handler, NULL);
+  window_single_click_subscribe(BUTTON_ID_DOWN, next_hint_handler);
   // window_long_click_subscribe(BUTTON_ID_DOWN, 0, reset_handler, NULL);
 }
 
 static void window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_frame(window_layer);
-  center = grect_center_point(&bounds);
 
   info_layer = layer_create(GRect(0, 0, bounds.size.w, 32));
   layer_set_update_proc(info_layer, info_layer_update_callback);
@@ -374,7 +513,7 @@ static void window_load(Window *window) {
   text_layer_set_background_color(hint_layer, GColorBlack);
   text_layer_set_text_alignment(hint_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(hint_layer));
-  text_layer_set_text(hint_layer, default_hint_text);
+  show_hint(0);
 
   track_label_layer = text_layer_create(GRect(0, 0, 42, 18));
   text_layer_set_font(track_label_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
@@ -423,6 +562,19 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(acc_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(acc_layer));
   text_layer_set_text(acc_layer, "~");
+
+  menu_layer = menu_layer_create(bounds);
+  menu_layer_set_callbacks(menu_layer, NULL, (MenuLayerCallbacks){
+    .get_num_sections = menu_get_num_sections_callback,
+    .get_num_rows = menu_get_num_rows_callback,
+    .get_header_height = menu_get_header_height_callback,
+    .draw_header = menu_draw_header_callback,
+    .draw_row = menu_draw_row_callback,
+    .select_click = menu_select_callback
+  });
+  
+  layer_set_hidden(menu_layer_get_layer(menu_layer), true);
+  layer_add_child(window_layer, menu_layer_get_layer(menu_layer));
 }
 
 static void window_unload(Window *window) {
@@ -439,10 +591,13 @@ static void window_unload(Window *window) {
   if (hint_layer) {
     text_layer_destroy(hint_layer);
   }
+  menu_layer_destroy(menu_layer);
 }
 
 static void init(void) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Launch reason: %d", launch_reason());
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Launch reason: %d", launch_reason());
+  hints[0] = "SELECT for history menu";
+  hints[1] = "Long SELECT to set target";
   #ifdef PBL_COLOR
     approaching = GColorMintGreen;
     receding = GColorSunsetOrange;
@@ -481,7 +636,7 @@ static void deinit(void) {
 int main(void) {
   init();
 
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Done initializing, pushed window: %p", window);
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Done initializing, pushed window: %p", window);
 
   app_event_loop();
   deinit();

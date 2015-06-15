@@ -48,8 +48,9 @@ you select them from the timeline.</p>
 </fieldset>
 </form>
 <div id="tok"></div>
-<div>Icon made by <a href="http://www.danielbruce.se" title="Daniel Bruce">Daniel Bruce</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a> is licensed under <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0">CC BY 3.0</a></div>
+<div>Icon made by <a href="http://www.danielbruce.se/" title="Daniel Bruce">Daniel Bruce</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a> is licensed under <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0">CC BY 3.0</a></div>
 <script>
+ var chosenPos;
  var f = document.getElementById('configform');
  var tokenDiv = document.getElementById('tok');
  f.onsubmit = sendConfig;
@@ -155,14 +156,68 @@ you select them from the timeline.</p>
   p.appendChild(document.createTextNode(' (or just save as draft from which you can copy and paste)'));
   tokenDiv.appendChild(p);
   tokenDiv.style.display = 'block';
+  
+  // get token's history
+  var req = new XMLHttpRequest();
+  req.onload = function() {
+   if ((this.status == 200) && (this.responseText.substr(0, 1) == '[')) {
+    var places = JSON.parse(this.responseText);
+    if (places && places.length) {
+     var div = document.createElement('div');
+     div.className = 'history';
+     var h2 = document.createElement('h2');
+     h2.appendChild(document.createTextNode('Location history'));
+     div.appendChild(h2);
+     var ul = document.createElement('ul');
+     for (var i=0; i<places.length; i++) {
+      if (!places[i]) {
+       continue;
+      }
+      console.log(places[i]);
+      var li = document.createElement('li');
+      if (places[i].time && Date.parse(places[i].time)) {
+       var d = new Date(places[i].time);
+       var dStr = (d.getMonth()+1) + '/' + 
+                  d.getDate() + ' ' + 
+                  d.getHours() + ':' + 
+                  d.getMinutes() + ' ';
+       li.appendChild(document.createTextNode(dStr));
+      }
+      if (places[i].pin && places[i].pin.layout && places[i].pin.layout.title) {
+       li.appendChild(document.createTextNode(places[i].pin.layout.title));
+      }
+      if (places[i].position && places[i].position.coords) {
+       var latlon = places[i].position.coords.latitude + ', ' + 
+                    places[i].position.coords.longitude;
+       li.appendChild(document.createTextNode(' (' + latlon + ')'));
+      }
+      li.setAttribute('data-position', latlon);
+      li.onclick = sendMe;
+      ul.appendChild(li);
+     }
+     div.appendChild(ul);
+    }
+   }
+   tokenDiv.appendChild(div);
+  };
+  req.open('GET', '/' + token + '/places/20');
+  req.send();
+ }
+ function sendMe() {
+  chosenPos = this.getAttribute('data-position');
+  var e = {preventDefault: function() {}};
+  sendConfig(e);
  }
  function sendConfig(e) {
   e.preventDefault();
   var config = {
-    units: f.units.value,
-    interval: f.interval.value,
-    sens: f.sens.value
+   units: f.units.value,
+   interval: f.interval.value,
+   sens: f.sens.value
   };
+  if (chosenPos) {
+   config.chosenPos = chosenPos;
+  }
   // console.log(config);
   location.href = '{{return_to}}' + encodeURIComponent(JSON.stringify(config));
   return false;

@@ -24,6 +24,32 @@ app.set('view engine', 'handlebars');
 app.use(express.static(__dirname + '/public'));
 app.set('port', (process.env.PORT || 5000)); // set the port on the instance
 
+Date.prototype.isLeapYear = function() {
+  var year = this.getFullYear();
+  if((year & 3) != 0) return false;
+  return ((year % 100) != 0 || (year % 400) == 0);
+};
+
+var dayCount = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+
+function createId() {
+  var d = new Date();
+  var mn = d.getMonth();
+  var dn = d.getDate();
+  var dayOfYear = dayCount[mn] + dn;
+  if(mn > 1 && d.isLeapYear()) {
+    dayOfYear++;
+  }
+  if (dayOfYear > 182) {
+    dayOfYear -= 182;
+  }
+  var cs = d.getHours() * 60 * 60 * 100 +
+    d.getMinutes() * 60 * 100 +
+    d.getSeconds() * 100 +
+    Math.floor(d.getMilliseconds()/10);
+  return '' + dayOfYear.toString() + cs;
+}
+
 function pushPin(place, res) {
   var pin;
   // var pinID = parseInt(place._id.toHexString(), 16);
@@ -56,21 +82,21 @@ function pushPin(place, res) {
   pin.addAction(new Timeline.Pin.Action({
     title: 'Get Back',
     type: Timeline.Pin.ActionType.OPEN_WATCH_APP,
-    launchCode: place._id
+    launchCode: parseInt(place._id)
   }));
   pin.createNotification = new Timeline.Pin.Notification(
-        {
-          "layout": {
-            "type": "genericNotification",
-            "title": pin.layout.title || "Get Back target",
-            "tinyIcon": "system://images/NOTIFICATION_FLAG",
-            "body": "A new target added from watch."
-          }
-        }
-      );
+    {
+      "layout": {
+        "type": "genericNotification",
+        "title": pin.layout.title || "Get Back target",
+        "tinyIcon": "system://images/NOTIFICATION_FLAG",
+        "body": "A new target added from watch."
+      }
+    }
+  );
 
   place.pin = pin;
-  console.log('Sending pin: ' + JSON.stringify(pin));
+  // console.log('Sending pin: ' + JSON.stringify(pin));
   timeline.sendUserPin(place.user, pin, function (err, body, resp) {
     if(err) {
       console.warn('Failed to push pin to timeline: ' + err);
@@ -86,7 +112,7 @@ function pushPin(place, res) {
 
 // add new place into history
 app.post('/:userToken/place/new', function(req, res) {
-  console.log(req.body);
+  // console.log(req.body);
   var userToken = req.params.userToken;
   // var place = JSON.parse(req.body) || {};
   var place = req.body || {};
@@ -94,7 +120,11 @@ app.post('/:userToken/place/new', function(req, res) {
   // if id is specified in params try to use it as mondodb id
   // otherwise create a new id, just use milliseconds since a nearby epoch...
   // This may result to duplicates!
-  place._id = parseInt(place.id) || new Date().getTime() - 1434000000000;
+  place._id = parseInt(place.id) || createId();
+  place.time = new Date().getTime();
+  if (place.pin && place.pin.time && Date.parse(place.pin.time)) {
+    place.time = new Date(place.pin.time);
+  }
   var pos = place.position; // || {};
   if (!pos || !pos.coords || !pos.coords.latitude || !pos.coords.longitude) {
     if (req.param('latitude') && req.param('longitude')) {
@@ -114,7 +144,7 @@ app.post('/:userToken/place/new', function(req, res) {
   }
 
   // store place to db
-  console.log('Trying to connect to mongodb at ' + mongoUri);
+  // console.log('Trying to connect to mongodb at ' + mongoUri);
   MongoClient.connect(mongoUri, function(err, db) {
     if (err || !db) {
       console.warn('Failed to open db connection: ' + err);
@@ -161,10 +191,11 @@ app.post('/:userToken/place/new', function(req, res) {
   });
 });
 
+// get a certain point
 app.get('/:userToken/place/:id', function(req, res) {
   var userToken = req.params.userToken;
   var id = parseInt(req.params.id);
-  console.log('Trying to connect to mongodb at ' + mongoUri);
+  // console.log('Trying to connect to mongodb at ' + mongoUri);
   MongoClient.connect(mongoUri, function(err, db) {
     if (err) {
       console.warn('Failed to open db connection: ' + err);
@@ -191,14 +222,11 @@ app.get('/:userToken/place/:id', function(req, res) {
   });
 });
 
-app.get('/:userToken/configure', function(req, res) {
+// get last :max points from history
+app.get('/:userToken/places/:max?', function(req, res) {
   var userToken = req.params.userToken;
-  var context = {'token': userToken,
-                 'return_to': req.param.return_to || 'pebblejs://close#',
-                 'history': []};
-  if (req.param.conf) {
-    context.conf = JSON.parse(req.param.conf);
-  }
+  var max = parseInt(req.params.max);
+  // console.log('Trying to connect to mongodb at ' + mongoUri);
   MongoClient.connect(mongoUri, function(err, db) {
     if (err) {
       console.warn('Failed to open db connection: ' + err);
@@ -207,24 +235,30 @@ app.get('/:userToken/configure', function(req, res) {
       return;
     }
     db.collection('places', function(er, collection) {
-      collection.find({user: userToken}, function(err, cursor) {
+      var query = {"user": userToken, "_id": {$lte: Math.pow(2, 32)-1}};
+      collection.find(query).sort({time: -1}).limit(max).toArray(function(err, places) {
         if (err) {
+          console.warn('Failed to retrieve places from db: ' + err);
           res.status(400);
-          res.send('Failed to retrieve place from db: ' + err);
+          res.send('Failed to retrieve places from db: ' + err);
           return;
         }
-        // console.log(doc);
-        cursor.each(function(err, doc) {
-          if (err) {
-            res.status(400);
-            res.send('Failed to retrieve place from db: ' + err);
-            return;
-          }
-          context.history.push(doc);
-        });
+        if (places) {
+          res.json(places);
+        }
       });
     });
   });  
+});
+
+// show configuration page
+app.get('/:userToken/configure', function(req, res) {
+  var userToken = req.params.userToken;
+  var context = {'token': userToken,
+                 'return_to': req.param.return_to || 'pebblejs://close#'};
+  if (req.param.conf) {
+    context.conf = JSON.parse(req.param.conf);
+  }
   res.render('configure', context);
 });
 
