@@ -204,14 +204,14 @@ app.get('/:userToken/place/:id', function(req, res) {
       return;
     }
     db.collection('places', function(er, collection) {
-      collection.findOne({_id: id}, function(err, doc) {
+      collection.findOne({"user": userToken, "_id": id}, function(err, doc) {
         if (err) {
           res.status(400);
           res.send('Failed to retrieve place from db: ' + err);
           return;
         }
         // console.log(doc);
-        if (!doc || (doc.user != userToken)) {
+        if (!doc) {
           res.status(403);
           res.send('No place with id ' + id + ' found for user token ' + userToken);
           return;
