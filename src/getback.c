@@ -189,7 +189,8 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
   int goingto = orientation;
-  static char bearing_text[6] = "      ";
+  
+  static char bearing_text[6] = "---";
   if (pheading > 0) {
     goingto = pheading%360;
     snprintf(bearing_text, sizeof(bearing_text), "%d°", goingto);
@@ -224,8 +225,8 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
 static void head_layer_update_callback(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, GColorBlack);
   if (distance <= accuracy) {
-    layer_set_hidden(text_layer_get_layer(track_layer), true);
-    int radius = distance;
+    layer_set_hidden(text_layer_get_layer(target_layer), true);
+    int radius = distance * 3;
     if (radius > max_radius) {
       radius = max_radius;
     }
@@ -235,7 +236,7 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
     graphics_fill_circle(ctx, needle_axis, radius);
   }
   else {
-    layer_set_hidden(text_layer_get_layer(track_layer), false);
+    layer_set_hidden(text_layer_get_layer(target_layer), false);
     gpath_rotate_to(head_path, (TRIG_MAX_ANGLE / 360) * (heading - orientation));
     gpath_draw_filled(ctx, head_path);
   }
@@ -516,7 +517,7 @@ static void window_load(Window *window) {
   needle_axis = GPoint(bounds.size.w/2, 80);
   gpath_move_to(head_path, needle_axis);
   layer_add_child(window_layer, head_layer);
-  max_radius = bounds.size.h - 81;
+  max_radius = (bounds.size.h - 81)/2;
   
   dist_layer = text_layer_create(GRect(0, bounds.size.h-49, bounds.size.w, 35));
   text_layer_set_font(dist_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
