@@ -1,4 +1,5 @@
 var MAX_PLACES = 20; // history length
+var MAX_ERRORS = 5;
 var initialized = false;
 var interval;
 var lat1 = 0;
@@ -24,6 +25,8 @@ var serverAddress = 'http://getback.pebbletime.io/';
 // var geocoder = 'http://api.geonames.org/findNearestAddressJSON?formatted=false&style=full';
 var geocoder = 'http://services.gisgraphy.com/street/search?format=json&from=0&to=1';
 var messageQueue = [];
+var errorCount = 0;
+var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 Pebble.addEventListener("ready", function(e) {
   lat2 = parseFloat(localStorage.getItem("lat2")) || null;
@@ -56,9 +59,9 @@ Pebble.addEventListener("ready", function(e) {
       }
     );
   }
-  console.log("JavaScript app ready and running!");
   getHistoryFromServer();
   initialized = true;
+  console.log("JavaScript app ready and running!");
 });
 
 Pebble.addEventListener("appmessage",
@@ -132,6 +135,7 @@ Pebble.addEventListener("webviewclosed",
     // console.log('is: ' + lat2 + ', ' + lon2 + ')');
     calculate();
     startWatcher();
+    getHistoryFromServer();  
   }
 );
 
@@ -220,15 +224,20 @@ function addLocation(position) {
           },
         }
       }
-      var res = JSON.parse(json);
-      if (res && res.result && res.result[0]) {
-        var placeName = res.result[0].name || '';
-        if (!placeName && res.result[0].isIn) {
-          placeName = res.result[0].isIn;
-        }
-        // console.log("Reverse geocoded address: " + placeName);
-        obj.pin.layout.title = placeName;
-      };
+      if (json && (json.substr(0, 1) == '{')) {
+        var res = JSON.parse(json);
+        if (res && res.result && res.result[0]) {
+          var placeName = res.result[0].name || '';
+          if (!placeName && res.result[0].isIn) {
+            placeName = res.result[0].isIn;
+          }
+          // console.log("Reverse geocoded address: " + placeName);
+          obj.pin.layout.title = placeName;
+        };
+      }
+      else {
+        console.warn("Reverse geocoding error: " + json);
+      }
       // add place to server
       var url = serverAddress + token + '/place/new';
       var req = new XMLHttpRequest();
@@ -241,6 +250,7 @@ function addLocation(position) {
         }
         var obj = JSON.parse(json); 
         // console.log("Sent place to server: " + obj._id);
+        getHistoryFromServer();
       };
       req.open("post", url, true);
       req.setRequestHeader('Content-Type', 'application/json');
@@ -374,22 +384,29 @@ function parseHistory() {
     return false;
   }
   // console.log('Got ' + places.length + ' history positions');
-  var index = 0;
+  var menuItemCount = 0;
   for (var i=0; i<places.length; i++) {
+    if (!places[i]._id || places[i]._id < 0 || places[i]._id > Math.pow(2, 32) -1) {
+      continue;
+    }
     var dStr = '---';
     if (places[i].time && Date.parse(places[i].time)) {
       var d = new Date(places[i].time);
-      dStr = (d.getMonth() + 1) + '/' +
+      dStr = months[d.getMonth()] + ' ' +
              d.getDate() + ' ' +
              d.getHours() + ':' +
+             (d.getMinutes() < 10 ? '0': '') +
              d.getMinutes();
     }
     var title = '---';
     if (places[i].pin && places[i].pin.layout && places[i].pin.layout.title) {
       title = places[i].pin.layout.title;
     }
+    if ((dStr == '---') && (title == '---')) {
+      continue;
+    }
     var msg = {'id': places[i]._id,
-               'count': places.length,
+               'count': menuItemCount++,
                'index': i,
                'title': dStr,
                'subtitle': title};

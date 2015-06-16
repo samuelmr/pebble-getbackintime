@@ -44,6 +44,7 @@ static const uint32_t SUBTITLE_KEY = 13;
 static const char *set_cmd = "set";
 static const char *quit_cmd = "quit";
 static GPath *head_path;
+static GPoint needle_axis;
 static GRect hint_layer_size;
 static const double YARD_LENGTH = 0.9144;
 static const double YARDS_IN_MILE = 1760;
@@ -54,6 +55,7 @@ ClickConfigProvider previous_ccp;
 GColor approaching;
 GColor receding;
 GColor bg;
+int max_radius;
 
 static void click_config_provider(void *context);
 
@@ -186,7 +188,13 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
-  int bearing_diff = abs((int) (orientation - heading));
+  int goingto = orientation;
+  static char bearing_text[6] = "      ";
+  if (pheading > 0) {
+    goingto = pheading%360;
+    snprintf(bearing_text, sizeof(bearing_text), "%d°", goingto);
+  }
+  int bearing_diff = abs((int) (goingto - heading));
   if (bearing_diff > 180) {
     bearing_diff = 180 - (bearing_diff % 180);
   }
@@ -194,8 +202,6 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
   GRect bearing_ind = GRect(42, bearing_size, 6, 30-bearing_size);
   graphics_context_set_fill_color(ctx, get_bar_color(30-bearing_size));
   graphics_fill_rect(ctx, bearing_ind, 0, GCornerNone);
-  static char bearing_text[6];
-  snprintf(bearing_text, sizeof(bearing_text), "%d°", orientation);
   text_layer_set_text(track_layer, bearing_text);
 
   int speed_size = (int) speed * 2;
@@ -216,9 +222,23 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
 }
 
 static void head_layer_update_callback(Layer *layer, GContext *ctx) {
-  gpath_rotate_to(head_path, (TRIG_MAX_ANGLE / 360) * (heading - orientation));
   graphics_context_set_fill_color(ctx, GColorBlack);
-  gpath_draw_filled(ctx, head_path);
+  if (distance <= accuracy) {
+    layer_set_hidden(text_layer_get_layer(track_layer), true);
+    int radius = distance;
+    if (radius > max_radius) {
+      radius = max_radius;
+    }
+    if (radius < 5) {
+      radius = 5;
+    }
+    graphics_fill_circle(ctx, needle_axis, radius);
+  }
+  else {
+    layer_set_hidden(text_layer_get_layer(track_layer), false);
+    gpath_rotate_to(head_path, (TRIG_MAX_ANGLE / 360) * (heading - orientation));
+    gpath_draw_filled(ctx, head_path);
+  }
 }
 
 static void send_message(const char *cmd, int32_t id) {
@@ -255,12 +275,10 @@ void hide_menu() {
 }
 
 void back_button_handler(ClickRecognizerRef recognizer, void *context) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Back pushed");
   if (layer_get_hidden(menu_layer_get_layer(menu_layer)) == false) {
     hide_menu();
   }
   else {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Destroy window");
     window_stack_pop(true);
   }
 }
@@ -317,7 +335,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   Tuple *count_tuple = dict_find(iter, COUNT_KEY);
   if (count_tuple) {
     history_count = count_tuple->value->int8;
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Found %d places in history", history_count);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Found %d places in history", history_count);
     if (history_count > MAX_PLACE_COUNT) {
       history_count = MAX_PLACE_COUNT;
     }
@@ -495,9 +513,10 @@ static void window_load(Window *window) {
   head_layer = layer_create(bounds);
   layer_set_update_proc(head_layer, head_layer_update_callback);
   head_path = gpath_create(&HEAD_PATH_POINTS);
-  GPoint needle_axis = {bounds.size.w/2, 74};
+  needle_axis = GPoint(bounds.size.w/2, 80);
   gpath_move_to(head_path, needle_axis);
   layer_add_child(window_layer, head_layer);
+  max_radius = bounds.size.h - 81;
   
   dist_layer = text_layer_create(GRect(0, bounds.size.h-49, bounds.size.w, 35));
   text_layer_set_font(dist_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
