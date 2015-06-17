@@ -26,6 +26,7 @@ var serverAddress = 'http://getback.pebbletime.io/';
 var geocoder = 'http://services.gisgraphy.com/street/search?format=json&from=0&to=1';
 var messageQueue = [];
 var errorCount = 0;
+var processing = false;
 var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 Pebble.addEventListener("ready", function(e) {
@@ -140,9 +141,13 @@ Pebble.addEventListener("webviewclosed",
 );
 
 function sendNextMessage() {
-  if (messageQueue.length > 0) {
+  if (!processing && (messageQueue.length > 0)) {
     Pebble.sendAppMessage(messageQueue[0], appMessageAck, appMessageNack);
     // console.log("Sent message to Pebble! " + messageQueue.length + ': ' + JSON.stringify(messageQueue[0]));
+    processing = true;
+  }
+  else {
+    processing = false;
   }
 }
 
@@ -407,7 +412,7 @@ function parseHistory() {
     }
     var msg = {'id': places[i]._id,
                'index': menuItemCount,
-               'count': menuItemCount++,
+               'count': ++menuItemCount,
                'title': dStr,
                'subtitle': title};
     messageQueue.push(msg);

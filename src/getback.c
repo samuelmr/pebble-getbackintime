@@ -426,20 +426,21 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     }
     distance = dist_tuple->value->int32;
   }
+  int32_t show_dist = distance;
   if (strcmp(units, "imperial") == 0) {
     unit = "yd";
-    distance = distance / YARD_LENGTH;
+    show_dist = distance / YARD_LENGTH;
   }
   else {
     unit = "m";
   }
-  if (distance > 2900) {
+  if (show_dist > 2900) {
     if (strcmp(units, "imperial") == 0) {
-      distance = (int) (distance / YARDS_IN_MILE);
+      show_dist = (int) (show_dist / YARDS_IN_MILE);
       unit = "mi";
     }
     else {
-      distance = (int) (distance / 1000);
+      show_dist = (int) (show_dist / 1000);
       unit = "km";
     }
   }
@@ -452,7 +453,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Sensitivity: %d", sensitivity);
   }
   static char dist_text[9];
-  snprintf(dist_text, sizeof(dist_text), "%d %s", (int) distance, unit);
+  snprintf(dist_text, sizeof(dist_text), "%d %s", (int) show_dist, unit);
   text_layer_set_text(dist_layer, dist_text);
   show_hint(0);
   // APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance updated: %d %s", (int) distance, text_layer_get_text(unit_layer));
@@ -493,7 +494,9 @@ void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *da
 }
 
 static void click_config_provider(void *context) {
+#ifdef PBL_PLATFORM_BASALT
   window_single_click_subscribe(BUTTON_ID_SELECT, menu_show_handler);
+#endif
   window_single_click_subscribe(BUTTON_ID_UP, prev_hint_handler);
   window_long_click_subscribe(BUTTON_ID_SELECT, 0, reset_handler, NULL);
   // window_long_click_subscribe(BUTTON_ID_UP, 0, reset_handler, NULL);
@@ -514,7 +517,7 @@ static void window_load(Window *window) {
   head_layer = layer_create(bounds);
   layer_set_update_proc(head_layer, head_layer_update_callback);
   head_path = gpath_create(&HEAD_PATH_POINTS);
-  needle_axis = GPoint(bounds.size.w/2, 80);
+  needle_axis = GPoint(bounds.size.w/2, 78);
   gpath_move_to(head_path, needle_axis);
   layer_add_child(window_layer, head_layer);
   max_radius = (bounds.size.h - 81)/2;
@@ -542,7 +545,7 @@ static void window_load(Window *window) {
   text_layer_set_background_color(hint_layer, GColorBlack);
   text_layer_set_text_alignment(hint_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(hint_layer));
-  show_hint(0);
+  show_hint(1);
 
   track_label_layer = text_layer_create(GRect(0, 0, 42, 18));
   text_layer_set_font(track_label_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
@@ -625,7 +628,11 @@ static void window_unload(Window *window) {
 
 static void init(void) {
   // APP_LOG(APP_LOG_LEVEL_DEBUG, "Launch reason: %d", launch_reason());
+#ifdef PBL_PLATFORM_BASALT
   hints[0] = "SELECT for history menu";
+#else
+  hints[0] = NULL;
+#endif
   hints[1] = "Long SELECT to set target";
   #ifdef PBL_COLOR
     approaching = GColorMintGreen;
@@ -636,7 +643,7 @@ static void init(void) {
   #endif
   Place *place = &places[0];
   place->id = -1;
-  strcpy(place->title, "Your location history");
+  strcpy(place->title, "Location history");
   strcpy(place->subtitle, "will appear here");
   history_count = 1;
 
