@@ -226,7 +226,7 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, GColorBlack);
   if (distance <= accuracy) {
     layer_set_hidden(text_layer_get_layer(target_layer), true);
-    int radius = distance * 3;
+    int radius = distance * 2;
     if (radius > max_radius) {
       radius = max_radius;
     }
