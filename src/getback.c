@@ -634,6 +634,12 @@ static void init(void) {
     approaching = GColorWhite;
     receding = GColorWhite;
   #endif
+  Place *place = &places[0];
+  place->id = -1;
+  strcpy(place->title, "Your location history");
+  strcpy(place->subtitle, "will appear here");
+  history_count = 1;
+
   compass_service_set_heading_filter(TRIG_MAX_ANGLE*sensitivity/360);
   compass_service_subscribe(&compass_heading_handler);
   app_message_register_inbox_received(in_received_handler);

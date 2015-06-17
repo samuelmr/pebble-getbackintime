@@ -406,8 +406,8 @@ function parseHistory() {
       continue;
     }
     var msg = {'id': places[i]._id,
+               'index': menuItemCount,
                'count': menuItemCount++,
-               'index': i,
                'title': dStr,
                'subtitle': title};
     messageQueue.push(msg);
