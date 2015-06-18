@@ -4,6 +4,7 @@
 #define MAX_HINT_COUNT 5
 
 static Window *window;
+static Window *menu_window;
 static TextLayer *dist_layer;
 // static TextLayer *unit_layer;
 static TextLayer *hint_layer;
@@ -28,6 +29,7 @@ static int16_t history_count = 0;
 // update screen only when heading changes at least <sensitivity> degrees
 // this is overridden by settings
 int sensitivity = 1;
+const bool animated = true;
 static const uint32_t CMD_KEY = 1;
 static const uint32_t HEAD_KEY = 2;
 static const uint32_t DIST_KEY = 3;
@@ -269,47 +271,10 @@ static void reset_handler(ClickRecognizerRef recognizer, void *context) {
   send_message(set_cmd, -1); // current location
 }
 
-void hide_menu() {
-  layer_set_hidden(menu_layer_get_layer(menu_layer), true);
-  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Hide menu, %d items!", history_count);
-  window_set_click_config_provider(window, click_config_provider);
-}
-
-void back_button_handler(ClickRecognizerRef recognizer, void *context) {
-  if (layer_get_hidden(menu_layer_get_layer(menu_layer)) == false) {
-    hide_menu();
-  }
-  else {
-    window_stack_pop(true);
-  }
-}
-
-void new_ccp(void *context) {
-  previous_ccp(context);
-  window_single_click_subscribe(BUTTON_ID_BACK, back_button_handler);
-}
-
-void force_back_button(Window *window, MenuLayer *menu_layer) {
-  previous_ccp = window_get_click_config_provider(window);
-  window_set_click_config_provider_with_context(window, new_ccp, menu_layer);
-}
-
-void show_menu() {
-  menu_layer_reload_data(menu_layer);
-  layer_mark_dirty(menu_layer_get_layer(menu_layer)); // unnecessary?
-  layer_set_hidden(menu_layer_get_layer(menu_layer), false);
-  menu_layer_set_click_config_onto_window(menu_layer, window);
-  force_back_button(window, menu_layer);
-  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Show menu, %d items!", history_count);
-}
-
 static void menu_show_handler(ClickRecognizerRef recognizer, void *context) {
-  if (layer_get_hidden(menu_layer_get_layer(menu_layer)) == true) {
-    show_menu();
-  }
-  else {
-    hide_menu();
-  }
+  // layer_mark_dirty(menu_layer_get_layer(menu_layer)); // unnecessary?
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Show menu, %d items!", history_count);
+  window_stack_push(menu_window, animated);
 }
 
 void out_sent_handler(DictionaryIterator *sent, void *context) {
@@ -349,7 +314,9 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     strcpy(place->title, title_tuple->value->cstring);
     Tuple *subtitle_tuple = dict_find(iter, SUBTITLE_KEY);
     strcpy(place->subtitle, subtitle_tuple->value->cstring);
-    layer_mark_dirty(menu_layer_get_layer(menu_layer));
+    if (menu_layer) {
+      layer_mark_dirty(menu_layer_get_layer(menu_layer));
+    }
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Found places %lu (%d): %s/%s", place->id, place_index, place->title, place->subtitle);
   }
 
@@ -478,7 +445,7 @@ static int16_t menu_get_header_height_callback(MenuLayer *menu_layer, uint16_t s
 }
 
 static void menu_draw_header_callback(GContext* ctx, const Layer *cell_layer, uint16_t section_index, void *data) {
-  menu_cell_basic_header_draw(ctx, cell_layer, "Place history");
+  menu_cell_basic_header_draw(ctx, cell_layer, "Location history");
 }
 
 static void menu_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index, void *data) {
@@ -490,19 +457,16 @@ void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *da
   Place *place = &places[cell_index->row];
   // APP_LOG(APP_LOG_LEVEL_DEBUG, "Getting info for history place %lu", place->id);
   send_message(set_cmd, place->id);
-  hide_menu();
+  window_stack_pop(animated);
 }
 
 static void click_config_provider(void *context) {
-#ifdef PBL_PLATFORM_BASALT
   window_single_click_subscribe(BUTTON_ID_SELECT, menu_show_handler);
-#endif
   window_single_click_subscribe(BUTTON_ID_UP, prev_hint_handler);
   window_long_click_subscribe(BUTTON_ID_SELECT, 0, reset_handler, NULL);
   // window_long_click_subscribe(BUTTON_ID_UP, 0, reset_handler, NULL);
   window_single_click_subscribe(BUTTON_ID_DOWN, next_hint_handler);
   // window_long_click_subscribe(BUTTON_ID_DOWN, 0, reset_handler, NULL);
-  window_single_click_subscribe(BUTTON_ID_BACK, back_button_handler);
 }
 
 static void window_load(Window *window) {
@@ -595,18 +559,6 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(acc_layer));
   text_layer_set_text(acc_layer, "~");
 
-  menu_layer = menu_layer_create(bounds);
-  menu_layer_set_callbacks(menu_layer, NULL, (MenuLayerCallbacks){
-    .get_num_sections = menu_get_num_sections_callback,
-    .get_num_rows = menu_get_num_rows_callback,
-    .get_header_height = menu_get_header_height_callback,
-    .draw_header = menu_draw_header_callback,
-    .draw_row = menu_draw_row_callback,
-    .select_click = menu_select_callback
-  });
-  
-  layer_set_hidden(menu_layer_get_layer(menu_layer), true);
-  layer_add_child(window_layer, menu_layer_get_layer(menu_layer));
 }
 
 static void window_unload(Window *window) {
@@ -623,16 +575,32 @@ static void window_unload(Window *window) {
   if (hint_layer) {
     text_layer_destroy(hint_layer);
   }
+}
+
+static void menu_window_load(Window *window) {
+  Layer *window_layer = window_get_root_layer(window);
+  GRect bounds = layer_get_frame(window_layer);
+  menu_layer = menu_layer_create(bounds);
+  menu_layer_set_callbacks(menu_layer, NULL, (MenuLayerCallbacks){
+    .get_num_sections = menu_get_num_sections_callback,
+    .get_num_rows = menu_get_num_rows_callback,
+    .get_header_height = menu_get_header_height_callback,
+    .draw_header = menu_draw_header_callback,
+    .draw_row = menu_draw_row_callback,
+    .select_click = menu_select_callback
+  });
+  menu_layer_set_click_config_onto_window(menu_layer, menu_window);
+  layer_add_child(window_layer, menu_layer_get_layer(menu_layer));
+}
+
+static void menu_window_unload(Window *window) {
   menu_layer_destroy(menu_layer);
 }
 
+
 static void init(void) {
   // APP_LOG(APP_LOG_LEVEL_DEBUG, "Launch reason: %d", launch_reason());
-#ifdef PBL_PLATFORM_BASALT
   hints[0] = "SELECT for history menu";
-#else
-  hints[0] = NULL;
-#endif
   hints[1] = "Long SELECT to set target";
   #ifdef PBL_COLOR
     approaching = GColorMintGreen;
@@ -643,8 +611,8 @@ static void init(void) {
   #endif
   Place *place = &places[0];
   place->id = -1;
-  strcpy(place->title, "Location history");
-  strcpy(place->subtitle, "will appear here");
+  strcpy(place->title, "Add new target");
+  strcpy(place->subtitle, "Set current location");
   history_count = 1;
 
   compass_service_set_heading_filter(TRIG_MAX_ANGLE*sensitivity/360);
@@ -656,6 +624,7 @@ static void init(void) {
   const uint32_t inbound_size = APP_MESSAGE_INBOX_SIZE_MINIMUM;
   const uint32_t outbound_size = APP_MESSAGE_OUTBOX_SIZE_MINIMUM;
   app_message_open(inbound_size, outbound_size);
+
   window = window_create();
   window_set_click_config_provider(window, click_config_provider);
 #ifndef PBL_SDK_3
@@ -665,8 +634,14 @@ static void init(void) {
     .load = window_load,
     .unload = window_unload,
   });
-  const bool animated = true;
   window_stack_push(window, animated);
+
+  menu_window = window_create();
+  window_set_window_handlers(menu_window, (WindowHandlers) {
+    .load = menu_window_load,
+    .unload = menu_window_unload,
+  });
+
 }
 
 static void deinit(void) {

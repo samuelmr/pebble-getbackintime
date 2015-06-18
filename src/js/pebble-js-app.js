@@ -13,7 +13,8 @@ var prevHead = 0;
 var prevDist = 0;
 var head = 0;
 var dist = 0;
-var token = '-';
+var userToken = '-';
+var timelineToken = '';
 var units = "metric";
 var sens = 5;
 var R = 6371000; // m
@@ -35,7 +36,8 @@ Pebble.addEventListener("ready", function(e) {
   interval = parseInt(localStorage.getItem("interval")) || 0;
   units = localStorage.getItem("units") || "metric";
   sens = parseInt(localStorage.getItem("sens")) || 5;
-  token = localStorage.getItem("token") || token;
+  userToken = Pebble.getAccountToken();
+  timelineToken = localStorage.getItem("timelineToken") || timelineToken;
   if ((lat2 === null) || (lon2 === null)) {
     storeCurrentPosition();
   }
@@ -45,21 +47,21 @@ Pebble.addEventListener("ready", function(e) {
   startWatcher();
   if (Pebble.getTimelineToken) {
     Pebble.getTimelineToken(
-      function (timelineToken) {
-        token = timelineToken;
-        // console.log('Got timeline token ' + token);
-        localStorage.setItem("token", token);
-        // sending id from phone to watch is just a signal that
-        // the phone is ready to accept app messages (e.g. id)
-        var msg = {"id": -1};
-        messageQueue.push(msg);
-        sendNextMessage();
+      function (token) {
+        timelineToken = token;
+        // console.log('Got timeline token ' + timelineToken);
+        localStorage.setItem("timelineToken", timelineToken);
       },
       function (error) { 
         // console.log('Error getting timeline token: ' + error);
       }
     );
   }
+  // sending id from phone to watch is just a signal that
+  // the phone is ready to accept app messages (e.g. id)
+  var msg = {"id": -1};
+  messageQueue.push(msg);
+  sendNextMessage();
   getHistoryFromServer();
   initialized = true;
   console.log("JavaScript app ready and running!");
@@ -98,11 +100,12 @@ Pebble.addEventListener("showConfiguration",
     var conf = {
       'units': units,
       'interval': interval,
-      'sens': sens};
-    if (token != '-') {
-      conf.token = token;
+      'sens': sens,
+      'userToken': userToken};
+    if (timelineToken != '-') {
+      conf.timelineToken = timelineToken;
     }
-    var uri = serverAddress + token + '/configure?conf=' +
+    var uri = serverAddress + userToken + '/configure?conf=' +
       encodeURIComponent(JSON.stringify(conf));
     // console.log("Configuration url: " + uri);
     Pebble.openURL(uri);
@@ -141,23 +144,26 @@ Pebble.addEventListener("webviewclosed",
 );
 
 function sendNextMessage() {
-  if (!processing && (messageQueue.length > 0)) {
-    Pebble.sendAppMessage(messageQueue[0], appMessageAck, appMessageNack);
-    // console.log("Sent message to Pebble! " + messageQueue.length + ': ' + JSON.stringify(messageQueue[0]));
-    processing = true;
+  if (processing) {
+    console.log('Currently processing an earlier message, waiting for it to finish...');
+    return;
   }
-  else {
-    processing = false;
+  if (messageQueue.length > 0) {
+    Pebble.sendAppMessage(messageQueue[0], appMessageAck, appMessageNack);
+    console.log("Sent message to Pebble! " + messageQueue.length + ': ' + JSON.stringify(messageQueue[0]));
+    processing = true;
   }
 }
 
 function appMessageAck(e) {
-  // console.log("Message accepted by Pebble!");
+  processing = false;
+  console.log("Message accepted by Pebble!");
   messageQueue.shift();
   sendNextMessage();
 }
 
 function appMessageNack(e) {
+  processing = false;
   console.warn("Message rejected by Pebble! " + e.data.error);
   if (e && e.data && e.data.transactionId) {
     // console.log("Rejected message id: " + e.data.transactionId);
@@ -198,28 +204,30 @@ function addLocation(position) {
     };
   }
   storeLocation(position);
-  if (token && (token != '-')) {
+  if (userToken && (userToken != '-')) {
     // get address
     var addr = position.coords.latitude + ',' + position.coords.longitude;
-    var url = geocoder + '&username=' + token + '&lat=' +
+    var url = geocoder + '&username=' + userToken + '&lat=' +
       position.coords.latitude + '&lng=' +
       position.coords.longitude;
     var rgc = new XMLHttpRequest(); // xhr for reverse geocoding, only one instance!
     rgc.open("get", url, true);
     rgc.setRequestHeader('User-Agent', 'Get Back in Time/2.3');
-    // rgc.setRequestHeader('X-Forwarded-For', token);
+    // rgc.setRequestHeader('X-Forwarded-For', userToken);
     rgc.onerror = rgc.ontimeout = function(e) {
       console.warn("Reverse geocoding error: " + this.statusText);
     }
     rgc.onload = function(res) {
       var json = this.responseText;
-      // console.log("Got: " + json + " from reverse geocoder");
+      console.log("Got: " + json + " from reverse geocoder");
       var latlon = Math.round(position.coords.latitude*1000)/1000 + ',' +
                    Math.round(position.coords.longitude*1000)/1000;
+      var now = new Date().toISOString();
       var obj = {
         "position": pos,
+        "time": now,
         "pin": {
-          "time": new Date().toISOString(),
+          "time": now,
           "layout": {
             "type": "genericPin",
             "tinyIcon": "system://images/NOTIFICATION_FLAG_TINY",
@@ -244,7 +252,8 @@ function addLocation(position) {
         console.warn("Reverse geocoding error: " + json);
       }
       // add place to server
-      var url = serverAddress + token + '/place/new';
+      var url = serverAddress + userToken + '/place/new';
+      console.log('Adding place to ' + url + ': ' + JSON.stringify(obj));
       var req = new XMLHttpRequest();
       req.onload = function(res) {
         var json = this.responseText;
@@ -254,15 +263,15 @@ function addLocation(position) {
           return;
         }
         var obj = JSON.parse(json); 
-        // console.log("Sent place to server: " + obj._id);
+        console.log("Sent place to server: " + obj._id);
         getHistoryFromServer();
       };
       req.open("post", url, true);
       req.setRequestHeader('Content-Type', 'application/json');
       req.send(JSON.stringify(obj));
     };
+    console.log("Trying to reverse geocode: " + url);
     rgc.send(null);
-    // console.log("Trying to reverse geocode: " + url);
   }
 }
 
@@ -336,7 +345,7 @@ function storeCurrentPosition() {
 }
 
 function getPositionFromServer(id) {
-  var url = serverAddress + token + '/place/' + id;
+  var url = serverAddress + userToken + '/place/' + id;
   var req = new XMLHttpRequest();
   req.onload = parseServerResponse;
   req.open("get", url, true);
@@ -365,16 +374,20 @@ function parseServerResponse() {
 }
 
 function getHistoryFromServer() {
-  var url = serverAddress + token + '/places/' + MAX_PLACES;
-  // console.log('Getting history from ' + url);
+  var url = serverAddress + userToken + '/places/' + MAX_PLACES;
+  console.log('Getting history from ' + url);
   var req = new XMLHttpRequest();
   req.onload = parseHistory;
+  req.onerror = function(e) {
+    console.log(JSON.stringify(e));
+  }
   req.open("get", url, true);
-  req.send();  
+  req.send();
 }
 
 function parseHistory() {
   var res = this.responseText;
+  console.log('History: ' + res.responseText);
   if (!res) {
     console.warn('No response from server');
     return false;
@@ -388,7 +401,7 @@ function parseHistory() {
     console.warn('No location history: ' + this.responseText);
     return false;
   }
-  // console.log('Got ' + places.length + ' history positions');
+  console.log('Got ' + places.length + ' history positions');
   var menuItemCount = 0;
   for (var i=0; i<places.length; i++) {
     if (!places[i]._id || places[i]._id < 0 || places[i]._id > Math.pow(2, 32) -1) {

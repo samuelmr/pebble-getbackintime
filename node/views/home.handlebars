@@ -28,11 +28,12 @@ element (<a href="http://developer.getpebble.com/guides/timeline/pin-structure/"
 Timeline Pin Structure</a>) to your JSON object, it will be passed on as is. Otherwise
 a new pin with some basic properties is created automatically. <tt>Open Watch App</tt>
 action is added to all pins.</p>
-<h3>Your personal timeline token</h3>
-<p>You need a timeline token in order to send locations to the server. You can get your
-timeline token from the watch app's configuration page. Open the Pebble app in your
-phone, select <tt>SETTINGS</tt> (or the gear icon) for <tt>Get Back in Time</tt> app
-and scroll to the end of the configuration screen.</p>
+<h3>Your personal tokens</h3>
+<p>You need an account token in order to send locations to the server. In order to push
+pins to Pebble's timeline, you also need a timeline token. You can get your personal
+tokens from the watch app's configuration page. Open the Pebble app in your phone,
+select <tt>SETTINGS</tt> (or the gear icon) for <tt>Get Back in Time</tt> app and scroll
+to the end of the configuration screen.</p>
 <h3>Example JSON</h3>
 <code>{
   "position": {
@@ -41,6 +42,9 @@ and scroll to the end of the configuration screen.</p>
       "longitude": 24.1
     }
   },
+  "time": "2015-04-29T16:07:22Z",
+  // insert your personal timeline token here
+  "timelineToken": '<span class="codetoken">{{timelineToken}}</span>',
   pin {
     // you shouldn't specify an id 
     // but if you do, it must be a unique integer
@@ -74,9 +78,9 @@ and scroll to the end of the configuration screen.</p>
 }
 </code>
 <h3>Example API call with JavaScript</h3>
-<code>// place your own token here!
-var token = '<span class="codetoken">{{token}}</span>';
-var url = 'http://getback.pebbletime.io/' + token + '/place/new';
+<code>// place your own account token here!
+var userToken = '<span class="codetoken">{{userToken}}</span>';
+var url = 'http://getback.pebbletime.io/' + userToken + '/place/new';
 var req = new XMLHttpRequest();
 req.onload = function() {
   console.log(this.responseText);

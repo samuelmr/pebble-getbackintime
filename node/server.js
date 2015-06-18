@@ -94,10 +94,11 @@ function pushPin(place, res) {
       }
     }
   );
-
   place.pin = pin;
-  // console.log('Sending pin: ' + JSON.stringify(pin));
-  timeline.sendUserPin(place.user, pin, function (err, body, resp) {
+  console.log(place);
+
+  console.log('Sending pin for ' + place.timelineToken + ': ' + JSON.stringify(pin));
+  timeline.sendUserPin(place.timelineToken, pin, function (err, body, resp) {
     if(err) {
       console.warn('Failed to push pin to timeline: ' + err);
       res.status(400);
@@ -126,7 +127,7 @@ app.post('/:userToken/place/new', function(req, res) {
     place.time = new Date(place.pin.time);
   }
   var pos = place.position; // || {};
-  if (!pos || !pos.coords || !pos.coords.latitude || !pos.coords.longitude) {
+  if (!pos || !pos.coords || !pos.coords.latitude || !pos.coords.longitude) {
     if (req.param('latitude') && req.param('longitude')) {
       pos.coords = {
         'latitude': req.param('latitude'),
@@ -142,7 +143,8 @@ app.post('/:userToken/place/new', function(req, res) {
       return;
     }
   }
-
+  // console.log(place);
+  
   // store place to db
   // console.log('Trying to connect to mongodb at ' + mongoUri);
   MongoClient.connect(mongoUri, function(err, db) {
@@ -173,7 +175,12 @@ app.post('/:userToken/place/new', function(req, res) {
                 return;
               }
               console.log('Place saved to db! id = ' + place._id);
-              pushPin(place, res);
+              if (place.timelineToken) {
+                pushPin(place, res);
+              }
+              else {
+                console.log('No timeline token in place. ' + JSON.stringify(place));
+              }
             });
           }
           else {
@@ -184,7 +191,12 @@ app.post('/:userToken/place/new', function(req, res) {
         }
         else {
           console.log('Place saved to db! id = ' + place._id);
-          pushPin(place, res);
+          if (place.timelineToken) {
+            pushPin(place, res);
+          }
+          else {
+            console.log('No timeline token in place. ' + JSON.stringify(place));
+          }
         }
       });
     });
@@ -254,8 +266,9 @@ app.get('/:userToken/places/:max?', function(req, res) {
 // show configuration page
 app.get('/:userToken/configure', function(req, res) {
   var userToken = req.params.userToken;
-  var context = {'token': userToken,
-                 'return_to': req.param.return_to || 'pebblejs://close#'};
+  var return_to = req.query.return_to || 'pebblejs://close#';
+  var context = {'userToken': userToken,
+                 'return_to': return_to};
   if (req.param.conf) {
     context.conf = JSON.parse(req.param.conf);
   }
@@ -263,7 +276,8 @@ app.get('/:userToken/configure', function(req, res) {
 });
 
 app.get('/:userToken?/', function (req, res) {
-  var context = {'token': req.params.userToken};
+  var context = {'userToken': req.params.userToken,
+                 'timelineToken': req.query.timelineToken};
   res.render('home', context);
 });
 
