@@ -212,7 +212,7 @@ function addLocation(position) {
       position.coords.longitude;
     var rgc = new XMLHttpRequest(); // xhr for reverse geocoding, only one instance!
     rgc.open("get", url, true);
-    rgc.setRequestHeader('User-Agent', 'Get Back in Time/2.3');
+    rgc.setRequestHeader('User-Agent', 'Get Back in Time/2.9');
     // rgc.setRequestHeader('X-Forwarded-For', userToken);
     rgc.onerror = rgc.ontimeout = function(e) {
       console.warn("Reverse geocoding error: " + this.statusText);
@@ -463,6 +463,9 @@ function startWatcher() {
   locationWatcher = setInterval(function() {
     lat1 = lat1 + Math.random()/100 * ((Math.random() > 0.5) || -1);
     lon1 = lon1 - Math.random()/100 * ((Math.random() > 0.5) || -1);
+    speed = Math.random() * 60;
+    accuracy = Math.random() * 60;
+    phoneHead = Math.random() * 360;
     calculate();
   }, interval * 1000);
   console.log("Started fake location watcher: " + locationWatcher);
