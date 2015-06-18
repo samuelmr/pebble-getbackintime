@@ -110,12 +110,12 @@ you select them from the timeline.</p>
     // console.log(this.responseText);
     var div = document.createElement('div');
     div.className = 'result error';
-    var msg = 'Error pushing to timeline!';
+    var msg = 'Error pushing to database!';
     if ((this.status == 200) && (this.responseText.substr(0, 1) == '{')) {
      var obj = JSON.parse(this.responseText);
      if (obj.pin && obj.pin.layout && obj.pin.layout.title) {
       div.className = 'result ok';
-      msg = 'Added place ' + obj.pin.layout.title + ' to timeline!';
+      msg = 'Added place ' + obj.pin.layout.title + ' to database!';
      }
     }
     else {
@@ -152,6 +152,7 @@ you select them from the timeline.</p>
   p.appendChild(document.createTextNode(' '));
   tokenDiv.appendChild(p);
   if (timelineToken) {
+   p = document.createElement('p');
    var text = document.createTextNode('Your Pebble timeline token is ');
    var tt = document.createElement('tt');
    tt.appendChild(document.createTextNode(timelineToken));
@@ -168,7 +169,7 @@ you select them from the timeline.</p>
   if (timelineToken) {
    a.href += '%20and%20your%20Pebble%20timeline%20token%20is%20' + timelineToken;
   }
-  a.appendChild(document.createTextNode('Send tokens by mail'));
+  a.appendChild(document.createTextNode('Send token' + (timelineToken ? 's' : '') + ' by mail'));
   p.appendChild(a);
   p.appendChild(document.createTextNode(' (or just save as draft from which you can copy and paste)'));
   tokenDiv.appendChild(p);
@@ -213,9 +214,9 @@ you select them from the timeline.</p>
       ul.appendChild(li);
      }
      div.appendChild(ul);
+     tokenDiv.appendChild(div);
     }
    }
-   tokenDiv.appendChild(div);
   };
   req.open('GET', '/' + userToken + '/places/20');
   req.send();
