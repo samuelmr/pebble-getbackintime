@@ -180,6 +180,7 @@ app.post('/:userToken/place/new', function(req, res) {
               }
               else {
                 console.log('No timeline token in place. ' + JSON.stringify(place));
+                res.json(place);
               }
             });
           }
@@ -196,6 +197,7 @@ app.post('/:userToken/place/new', function(req, res) {
           }
           else {
             console.log('No timeline token in place. ' + JSON.stringify(place));
+            res.json(place);
           }
         }
       });
@@ -269,8 +271,8 @@ app.get('/:userToken/configure', function(req, res) {
   var return_to = req.query.return_to || 'pebblejs://close#';
   var context = {'userToken': userToken,
                  'return_to': return_to};
-  if (req.param.conf) {
-    context.conf = JSON.parse(req.param.conf);
+  if (req.query.conf) {
+    context.conf = JSON.parse(req.query.conf);
   }
   res.render('configure', context);
 });
