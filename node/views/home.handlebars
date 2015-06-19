@@ -77,18 +77,38 @@ to the end of the configuration screen.</p>
   }
 }
 </code>
+<h3>Minimal JSON</h3>
+<code>{
+  "position": {
+    "coords": {
+      "latitude": 60.9,
+      "longitude": 24.1
+    }
+  },
+}
+</code>
 <h3>Example API call with JavaScript</h3>
 <code>// place your own account token here!
 var userToken = '<span class="codetoken">{{userToken}}</span>';
+// add your timeline token here
+var timelineToken = '<span class="codetoken">{{timelineToken}}</span>';
 var url = 'http://getback.pebbletime.io/' + userToken + '/place/new';
 var req = new XMLHttpRequest();
 req.onload = function() {
   console.log(this.responseText);
 };
-req.open("PUT", url, true);
-req.setRequestHeader('Content-Type: application/json');
+req.open("POST", url, true);
+req.setRequestHeader('Content-Type', 'application/json');
 function success(position) {
-  var obj = {"position": position};
+  var obj = {
+    "position": {
+      "coords": {
+        "latitude": position.coords.latitude,
+        "longitude": position.coords.longitude
+      }
+    },
+    "timelineToken": timelineToken
+  };
   req.send(JSON.stringify(obj));
 }
 window.navigator.geolocation.getCurrentPosition(success);

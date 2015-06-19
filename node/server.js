@@ -3,6 +3,7 @@ var bodyParser = require('body-parser');
 var Timeline = require('pebble-api');
 var MongoClient = require('mongodb').MongoClient;
 var exphbs  = require('express-handlebars');
+var cors = require('cors');
 
 var mongoUri = process.env.MONGOLAB_URI || 
   process.env.MONGOHQ_URL || 
@@ -12,6 +13,7 @@ var mongoUri = process.env.MONGOLAB_URI ||
 var timeline = new Timeline();
 
 var app = express();
+app.use(cors());
 app.use(bodyParser.json());
 
 var hbs = exphbs.create({
@@ -56,7 +58,7 @@ function pushPin(place, res) {
   var pinID = place._id.toString();
   if (place.pin) {
     place.pin.id = pinID;
-    place.pin.time = new Date(place.pin.time);
+    place.pin.time = new Date(place.pin.time || place.time);
     try {
      pin = new Timeline.Pin(place.pin);
     }
@@ -70,7 +72,7 @@ function pushPin(place, res) {
   else {
     pin = new Timeline.Pin({
       id: pinID,
-      time: new Date(),
+      time: new Date(place.time),
       layout: new Timeline.Pin.Layout({
         type: Timeline.Pin.LayoutType.GENERIC_PIN,
         tinyIcon: Timeline.Pin.Icon.PIN,
@@ -124,7 +126,7 @@ app.post('/:userToken/place/new', function(req, res) {
   place._id = parseInt(place.id) || createId();
   place.time = new Date().getTime();
   if (place.pin && place.pin.time && Date.parse(place.pin.time)) {
-    place.time = new Date(place.pin.time);
+    place.time = new Date(place.pin.time).toISOString();
   }
   var pos = place.position; // || {};
   if (!pos || !pos.coords || !pos.coords.latitude || !pos.coords.longitude) {
