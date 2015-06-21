@@ -1,11 +1,15 @@
 var MAX_PLACES = 20; // history length
 var MAX_ERRORS = 5;
 var initialized = false;
-var interval;
 var lat1 = 0;
 var lon1 = 0;
-var lat2;
-var lon2;
+var lat2 = parseFloat(localStorage.getItem("lat2")) || null;
+var lon2 = parseFloat(localStorage.getItem("lon2")) || null;
+var interval = parseInt(localStorage.getItem("interval")) || 0;
+var units = localStorage.getItem("units") || "metric";
+var sens = parseInt(localStorage.getItem("sens")) || 5;
+var userToken = Pebble.getAccountToken() || "-";
+var timelineToken = localStorage.getItem("timelineToken") || "";
 var speed = 0;
 var accuracy = 0;
 var phoneHead = 0;
@@ -13,10 +17,6 @@ var prevHead = 0;
 var prevDist = 0;
 var head = 0;
 var dist = 0;
-var userToken = '-';
-var timelineToken = '';
-var units = "metric";
-var sens = 5;
 var R = 6371000; // m
 var locationWatcher;
 var locationInterval;
@@ -31,13 +31,6 @@ var processing = false;
 var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 Pebble.addEventListener("ready", function(e) {
-  lat2 = parseFloat(localStorage.getItem("lat2")) || null;
-  lon2 = parseFloat(localStorage.getItem("lon2")) || null;
-  interval = parseInt(localStorage.getItem("interval")) || 0;
-  units = localStorage.getItem("units") || "metric";
-  sens = parseInt(localStorage.getItem("sens")) || 5;
-  userToken = Pebble.getAccountToken();
-  timelineToken = localStorage.getItem("timelineToken") || timelineToken;
   if ((lat2 === null) || (lon2 === null)) {
     storeCurrentPosition();
   }
@@ -102,7 +95,7 @@ Pebble.addEventListener("showConfiguration",
       'interval': interval,
       'sens': sens,
       'userToken': userToken};
-    if (timelineToken != '-') {
+    if (timelineToken) {
       conf.timelineToken = timelineToken;
     }
     var uri = serverAddress + userToken + '/configure?conf=' +
