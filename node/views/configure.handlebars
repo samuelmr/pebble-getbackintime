@@ -116,6 +116,10 @@ you select them from the timeline.</p>
       div.className = 'result ok';
       msg = 'Added place ' + obj.pin.layout.title + ' to database!';
      }
+     else if (obj) {
+      div.className = 'result ok';
+      msg = 'Added place to database!';
+     }
     }
     else {
      msg += ' (' + this.responseText + ')';
