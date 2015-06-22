@@ -92,7 +92,7 @@ to the end of the configuration screen.</p>
 var userToken = '<span class="codetoken">{{userToken}}</span>';
 // add your timeline token here
 var timelineToken = '<span class="codetoken">{{timelineToken}}</span>';
-var url = 'http://getback.pebbletime.io/' + userToken + '/place/new';
+var url = '<span id="docloc">http://getback.timelinepush.com</span>/' + userToken + '/place/new';
 var req = new XMLHttpRequest();
 req.onload = function() {
   console.log(this.responseText);
@@ -120,3 +120,11 @@ own environment in order to minimize the load to the API server. If you want bet
 service level or if you plan to automatically push more than a dozen locations per day
 to your timeline, consider implementing your own API server. You can start by cloning
 <a href="https://github.com/samuelmr/pebble-getbackintime">the code on Github</a>.</p>
+
+<script>
+  var loc = window.location;
+  var dl = document.getElementById('docloc');
+  if (dl) {
+    dl.textContent = loc.protocol + '//' + loc.host;
+  }
+</script>

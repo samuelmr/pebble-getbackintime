@@ -21,7 +21,7 @@ var R = 6371000; // m
 var locationWatcher;
 var locationInterval;
 var locationOptions = {timeout: 15000, maximumAge: 1000, enableHighAccuracy: true };
-var serverAddress = 'http://getback.pebbletime.io/';
+var serverAddress = 'http://getback.timelinepush.com/';
 // var geocoder = 'http://nominatim.openstreetmap.org/reverse?format=json&zoom=18';
 // var geocoder = 'http://api.geonames.org/findNearestAddressJSON?formatted=false&style=full';
 var geocoder = 'http://services.gisgraphy.com/street/search?format=json&from=0&to=1';
