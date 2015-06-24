@@ -59,6 +59,7 @@ function pushPin(place, res) {
   if (place.pin) {
     place.pin.id = pinID;
     place.pin.time = new Date(place.pin.time || place.time);
+    console.log(place.pin);
     try {
      pin = new Timeline.Pin(place.pin);
     }
@@ -80,6 +81,7 @@ function pushPin(place, res) {
         body: 'Set from watch'
       })
     });
+    console.log(pin);
   }
   pin.addAction(new Timeline.Pin.Action({
     title: 'Get Back',
@@ -120,13 +122,14 @@ app.post('/:userToken/place/new', function(req, res) {
   // var place = JSON.parse(req.body) || {};
   var place = req.body || {};
   place.user = userToken;
+  console.log(place);
   // if id is specified in params try to use it as mondodb id
   // otherwise create a new id, just use milliseconds since a nearby epoch...
   // This may result to duplicates!
   place._id = parseInt(place.id) || createId();
   place.time = new Date().getTime();
   if (place.pin && place.pin.time && Date.parse(place.pin.time)) {
-    place.time = new Date(place.pin.time).toISOString();
+    place.time = new Date(place.pin.time).getTime();
   }
   var pos = place.position; // || {};
   if (!pos || !pos.coords || !pos.coords.latitude || !pos.coords.longitude) {
