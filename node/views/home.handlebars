@@ -92,7 +92,8 @@ to the end of the configuration screen.</p>
 var userToken = '<span class="codetoken">{{userToken}}</span>';
 // add your timeline token here
 var timelineToken = '<span class="codetoken">{{timelineToken}}</span>';
-var url = '<span id="docloc">http://getback.timelinepush.com</span>/' + userToken + '/place/new';
+var url = '<span id="docloc">http://getback.timelinepush.com</span>/' + 
+  userToken + '/place/new';
 var req = new XMLHttpRequest();
 req.onload = function() {
   console.log(this.responseText);
