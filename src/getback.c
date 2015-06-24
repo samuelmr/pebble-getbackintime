@@ -363,10 +363,16 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   Tuple *acc_tuple = dict_find(iter, ACCURACY_KEY);
   if (acc_tuple) {
     accuracy = acc_tuple->value->int16;
+    int16_t show_acc = accuracy;
+    char *acc_unit = "m";
+    if (strcmp(units, "imperial") == 0) {
+      show_acc = (int) (accuracy / YARD_LENGTH);
+      acc_unit = "y";
+    }
     static char acc_text[6];
-    snprintf(acc_text, sizeof(acc_text), "%d m", (int) accuracy);
+    snprintf(acc_text, sizeof(acc_text), "%d %s", show_acc, acc_unit);
     text_layer_set_text(acc_layer, acc_text);
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated accuracy to %d", accuracy);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated accuracy to %d %s (%d)", show_acc, acc_unit, accuracy);
   }
   Tuple *speed_tuple = dict_find(iter, SPEED_KEY);
   if (speed_tuple) {
