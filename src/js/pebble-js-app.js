@@ -145,7 +145,7 @@ Pebble.addEventListener("webviewclosed",
 function sendNextMessage() {
   if (processing) {
     console.log('Currently processing an earlier message, waiting for it to finish... (' + messageQueue.length + ' messages waiting!)');
-    // return;
+    return;
   }
   if (messageQueue.length > 0) {
     console.log('Sending message 1/' + messageQueue.length);
@@ -219,6 +219,7 @@ function addLocation(position) {
       var now = new Date().toISOString();
       var obj = {
         "position": pos,
+        "timelineToken": timelineToken,
         "pin": {
           "time": now,
           "layout": {
