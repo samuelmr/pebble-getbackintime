@@ -8,7 +8,7 @@ var lon2 = parseFloat(localStorage.getItem("lon2")) || null;
 var interval = parseInt(localStorage.getItem("interval")) || 0;
 var units = localStorage.getItem("units") || "metric";
 var sens = parseInt(localStorage.getItem("sens")) || 5;
-var userToken = Pebble.getAccountToken() || "-";
+var userToken = "-";
 var timelineToken = localStorage.getItem("timelineToken") || "";
 var speed = 0;
 var accuracy = 0;
@@ -31,24 +31,28 @@ var processing = false;
 var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 Pebble.addEventListener("ready", function(e) {
+  userToken = Pebble.getAccountToken() || "-";
   if ((lat2 === null) || (lon2 === null)) {
     storeCurrentPosition();
   }
   else {
-    // console.log("Target location known:" + lon2 + ',' + lat2);
+    console.log("Target location known:" + lon2 + ',' + lat2);
   }
   startWatcher();
   if (Pebble.getTimelineToken) {
     Pebble.getTimelineToken(
       function (token) {
         timelineToken = token;
-        // console.log('Got timeline token ' + timelineToken);
+        console.log('Got timeline token ' + timelineToken);
         localStorage.setItem("timelineToken", timelineToken);
       },
       function (error) { 
-        // console.log('Error getting timeline token: ' + error);
+        console.log('Error getting timeline token: ' + error);
       }
     );
+  }
+  else {
+    console.log('Timeline not supported (no timeline token)');
   }
   // sending id from phone to watch is just a signal that
   // the phone is ready to accept app messages (e.g. id)
@@ -63,14 +67,15 @@ Pebble.addEventListener("ready", function(e) {
 Pebble.addEventListener("appmessage",
   function(e) {
     if (e && e.payload && e.payload.cmd) {
-      // console.log("Got command: " + e.payload.cmd + ' (' + e.payload.id + ')');
+      console.log("Got command: " + e.payload.cmd + ' (' + e.payload.id + ')');
       switch (e.payload.cmd) {
         case 'set':
           if (!e.payload.id || (e.payload.id < 0)) {
+            console.log('Setting new target (' + e.payload.id + ')');
             storeCurrentPosition();
           }
           else {
-            // console.log('Getting data for place ' + e.payload.id);
+            console.log('Getting data for place ' + e.payload.id);
             getPositionFromServer(e.payload.id);
           }
           break;
@@ -90,6 +95,7 @@ Pebble.addEventListener("appmessage",
 
 Pebble.addEventListener("showConfiguration",
   function() {
+    userToken = Pebble.getAccountToken() || userToken;
     var conf = {
       'units': units,
       'interval': interval,
@@ -100,36 +106,36 @@ Pebble.addEventListener("showConfiguration",
     }
     var uri = serverAddress + userToken + '/configure?conf=' +
       encodeURIComponent(JSON.stringify(conf));
-    // console.log("Configuration url: " + uri);
+    console.log("Configuration url: " + uri);
     Pebble.openURL(uri);
   }
 );
 
 Pebble.addEventListener("webviewclosed",
   function(e) {
-    // console.log(e.response);
+    console.log(e.response);
     var options = JSON.parse(decodeURIComponent(e.response));
-    // console.log("Webview window returned: " + JSON.stringify(options));
+    console.log("Webview window returned: " + JSON.stringify(options));
     units = (options.units == 'imperial') ? 'imperial' : 'metric';
     localStorage.setItem("units", units);
-    // console.log("Units set to: " + units);
+    console.log("Units set to: " + units);
     interval = parseInt(options.interval) || 0;
     localStorage.setItem("interval", interval);
-    // console.log("Interval set to: " + interval);
+    console.log("Interval set to: " + interval);
     sens = parseInt(options.sens) || 5;
     localStorage.setItem("sens", sens);
-    // console.log("Sentitivity set to: " + sens);
+    console.log("Sentitivity set to: " + sens);
     var msg = {"units": units,
                "sens": parseInt(sens)};
     messageQueue.push(msg);
     sendNextMessage();
-    // console.log('was: ' + lat2 + ', ' + lon2 + ')');
+    console.log('was: ' + lat2 + ', ' + lon2 + ')');
     if (options.chosenPos) {
      var latlon = options.chosenPos.split(', ');
      lat2 = parseFloat(latlon[0]);
      lon2 = parseFloat(latlon[1]);
     }
-    // console.log('is: ' + lat2 + ', ' + lon2 + ')');
+    console.log('is: ' + lat2 + ', ' + lon2 + ')');
     calculate();
     startWatcher();
     getHistoryFromServer();  
@@ -138,10 +144,11 @@ Pebble.addEventListener("webviewclosed",
 
 function sendNextMessage() {
   if (processing) {
-    console.log('Currently processing an earlier message, waiting for it to finish...');
-    return;
+    console.log('Currently processing an earlier message, waiting for it to finish... (' + messageQueue.length + ' messages waiting!)');
+    // return;
   }
   if (messageQueue.length > 0) {
+    console.log('Sending message 1/' + messageQueue.length);
     Pebble.sendAppMessage(messageQueue[0], appMessageAck, appMessageNack);
     console.log("Sent message to Pebble! " + messageQueue.length + ': ' + JSON.stringify(messageQueue[0]));
     processing = true;
@@ -150,32 +157,32 @@ function sendNextMessage() {
 
 function appMessageAck(e) {
   processing = false;
-  console.log("Message accepted by Pebble!");
   messageQueue.shift();
+  console.log('Message accepted by Pebble! (' + messageQueue.length + ' messages waiting!)');
   sendNextMessage();
 }
 
 function appMessageNack(e) {
   processing = false;
-  console.warn("Message rejected by Pebble! " + e.data.error);
   if (e && e.data && e.data.transactionId) {
-    // console.log("Rejected message id: " + e.data.transactionId);
+    console.log("Rejected message id: " + e.data.transactionId);
   }
   if (errorCount >= MAX_ERRORS) {
     messageQueue.shift();
   }
   else {
     errorCount++;
-    // console.log("Retrying, " + errorCount);
+    console.log("Retrying, " + errorCount);
   }
+  console.warn('Message rejected by Pebble! ' + e.data.error + ' (' + messageQueue.length + ' messages waiting!)');
   sendNextMessage();
 }
 
 function locationSuccess(position) {
-  // console.log("Got location " +
-  // position.coords.latitude + ',' +
-  // position.coords.longitude + ', heading at ' +
-  // position.coords.heading);
+  console.log("Got location " +
+    position.coords.latitude + ',' +
+    position.coords.longitude + ', heading at ' +
+    position.coords.heading);
   lat1 = position.coords.latitude;
   lon1 = position.coords.longitude;
   speed = position.coords.speed;
@@ -185,21 +192,15 @@ function locationSuccess(position) {
 }
 
 function addLocation(position) {
-  var pos = position;
-  if (JSON.stringify(pos) == "{}") {
-    // WTF: JSON.stringify(position) returns {}
-    // but position.coords.latitude and position.coords.longitude exist
-    pos = {
-      'coords': {
-        'latitude': position.coords.latitude,
-        'longitude': position.coords.longitude
-      }
-    };
-  }
+  var pos = {
+    'coords': {
+      'latitude': position.coords.latitude,
+      'longitude': position.coords.longitude
+    }
+  };
   storeLocation(position);
   if (userToken && (userToken != '-')) {
     // get address
-    var addr = position.coords.latitude + ',' + position.coords.longitude;
     var url = geocoder + '&username=' + userToken + '&lat=' +
       position.coords.latitude + '&lng=' +
       position.coords.longitude;
@@ -209,7 +210,7 @@ function addLocation(position) {
     // rgc.setRequestHeader('X-Forwarded-For', userToken);
     rgc.onerror = rgc.ontimeout = function(e) {
       console.warn("Reverse geocoding error: " + this.statusText);
-    }
+    };
     rgc.onload = function(res) {
       var json = this.responseText;
       console.log("Got: " + json + " from reverse geocoder");
@@ -218,7 +219,6 @@ function addLocation(position) {
       var now = new Date().toISOString();
       var obj = {
         "position": pos,
-        "time": now,
         "pin": {
           "time": now,
           "layout": {
@@ -229,17 +229,17 @@ function addLocation(position) {
             "body": "Set from watch."
           },
         }
-      }
+      };
       if (json && (json.substr(0, 1) == '{')) {
-        var res = JSON.parse(json);
-        if (res && res.result && res.result[0]) {
-          var placeName = res.result[0].name || '';
-          if (!placeName && res.result[0].isIn) {
-            placeName = res.result[0].isIn;
+        var gres = JSON.parse(json);
+        if (gres && gres.result && gres.result[0]) {
+          var placeName = gres.result[0].name || '';
+          if (!placeName && gres.result[0].isIn) {
+            placeName = gres.result[0].isIn;
           }
-          // console.log("Reverse geocoded address: " + placeName);
+          console.log("Reverse geocoded address: " + placeName);
           obj.pin.layout.title = placeName;
-        };
+        }
       }
       else {
         console.warn("Reverse geocoding error: " + json);
@@ -250,7 +250,7 @@ function addLocation(position) {
       var req = new XMLHttpRequest();
       req.onload = function(res) {
         var json = this.responseText;
-        // console.log('Got ' + json);
+        console.log('Got ' + json);
         if (!json || (json.substr(0, 1) != '{')) {
           console.warn("Error sending place to server: " + json);
           return;
@@ -273,9 +273,9 @@ function storeLocation(position) {
   lon2 = position.coords.longitude;
   localStorage.setItem("lat2", lat2);
   localStorage.setItem("lon2", lon2);
-  // console.log("Stored location " +
-  // position.coords.latitude + ',' +
-  // position.coords.longitude);
+  console.log("Stored location " +
+    position.coords.latitude + ',' +
+    position.coords.longitude);
   calculate();
 }
 
@@ -313,13 +313,16 @@ function calculate() {
              "sens": parseInt(sens)};
       if ((speed > 0) && (!isNaN(phoneHead))) {
         // enough movement to calculate speed and heading
-        msg["phonehead"] = phoneHead;
-        msg["speed"] = speed;
+        msg.phonehead = phoneHead;
+        msg.speed = speed;
       }
       messageQueue.push(msg);
       sendNextMessage();
       prevDist = dist;
       prevHead = head;
+    }
+    else {
+      console.log(dist + ' = ' + prevDist + ' and ' + head + ' = ' + prevHead + ', not enough movement');
     }
   }
 }
@@ -329,7 +332,7 @@ function locationError(error) {
 }
 
 function storeCurrentPosition() {
-  // console.log("Attempting to store current position.");
+  console.log("Attempting to store current position.");
   var msg = {"dist": 0,
              "head": 0};
   messageQueue.push(msg);
@@ -360,9 +363,9 @@ function parseServerResponse() {
     console.warn('No position from server: ' + this.responseText);
     return false;
   }
-  // console.log('Got position from server: ' +
-  //   obj.position.coords.latitude + ', ' +
-  //   obj.position.coords.longitude);
+  console.log('Got position from server: ' +
+     obj.position.coords.latitude + ', ' +
+     obj.position.coords.longitude);
   storeLocation(obj.position);
 }
 
@@ -373,14 +376,14 @@ function getHistoryFromServer() {
   req.onload = parseHistory;
   req.onerror = function(e) {
     console.log(JSON.stringify(e));
-  }
+  };
   req.open("get", url, true);
   req.send();
 }
 
 function parseHistory() {
   var res = this.responseText;
-  console.log('History: ' + res.responseText);
+  console.log('History: ' + res);
   if (!res) {
     console.warn('No response from server');
     return false;
@@ -401,7 +404,7 @@ function parseHistory() {
       continue;
     }
     var dStr = '---';
-    if (places[i].time && Date.parse(places[i].time)) {
+    if (places[i].time) {
       var d = new Date(places[i].time);
       dStr = months[d.getMonth()] + ' ' +
              d.getDate() + ' ' +
@@ -423,8 +426,8 @@ function parseHistory() {
                'subtitle': title};
     messageQueue.push(msg);
   }
-  // console.log('Pushed ' + messageQueue.length + ' messages to queue...');
-  sendNextMessage(msg);
+  console.log('Pushed ' + messageQueue.length + ' messages to queue...');
+  sendNextMessage();
 }
 
 function startWatcher() {  
@@ -435,17 +438,17 @@ function startWatcher() {
     navigator.geolocation.clearWatch(locationWatcher);
   }
   if (interval > 0) {
-    // console.log('Interval is ' + interval + ', using getCurrentPosition and setInterval');
+    console.log('Interval is ' + interval + ', using getCurrentPosition and setInterval');
     navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
     locationInterval = setInterval(function() {
       navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
     }, interval * 1000);      
   }
   else {
-    // console.log('Interval not set, using watchPosition');
+    console.log('Interval not set, using watchPosition');
     navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
     locationWatcher = navigator.geolocation.watchPosition(locationSuccess, locationError, locationOptions);  
-    // console.log("Started location watcher: " + locationWatcher);
+    console.log("Started location watcher: " + locationWatcher);
   }
   // for testing: randomize movement!
   /*

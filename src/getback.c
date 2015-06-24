@@ -6,7 +6,6 @@
 static Window *window;
 static Window *menu_window;
 static TextLayer *dist_layer;
-// static TextLayer *unit_layer;
 static TextLayer *hint_layer;
 static TextLayer *track_layer;
 static TextLayer *target_layer;
@@ -159,20 +158,21 @@ void compass_heading_handler(CompassHeadingData heading_data){
   switch (heading_data.compass_status) {
     case CompassStatusDataInvalid:
       hints[2] = "Calibrating compass...";
-      // snprintf(valid_buf, sizeof(valid_buf), "%s", "C");
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Calibrating compass");
       break;
     case CompassStatusCalibrating:
       hints[2] = "Fine tuning compass...";
-      // snprintf(valid_buf, sizeof(valid_buf), "%s", "F");
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Fine tuning compass");
       break;
     case CompassStatusCalibrated:
       hints[2] = "Compass calibrated";
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Compass calibrated");
       if (strcmp(text_layer_get_text(hint_layer), "Fine tuning compass...") == 0) {
         text_layer_set_text(hint_layer, hints[0]);
       }
       // orientation = heading_data.true_heading;
       orientation = (360 - TRIGANGLE_TO_DEG(heading_data.magnetic_heading))%360;
-      // APP_LOG(APP_LOG_LEVEL_DEBUG, "Magnetic heading: %d°", orientation);
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Magnetic heading: %d, orientation %d°",(int) heading_data.magnetic_heading, orientation);
       layer_mark_dirty(head_layer);
       layer_mark_dirty(info_layer);
       return;
@@ -180,7 +180,7 @@ void compass_heading_handler(CompassHeadingData heading_data){
   show_hint(2);
   if (pheading >= 0) {
     orientation = pheading%360;
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Orientation from phone heading: %d°", orientation);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Orientation from phone heading: %d° (%d)", orientation, pheading);
   }
   layer_mark_dirty(head_layer);
   layer_mark_dirty(info_layer);
@@ -196,11 +196,13 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
   if (pheading > 0) {
     goingto = pheading%360;
     snprintf(bearing_text, sizeof(bearing_text), "%d°", goingto);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Phone heading exists, moving to %d", goingto);
   }
   int bearing_diff = abs((int) (goingto - heading));
   if (bearing_diff > 180) {
     bearing_diff = 180 - (bearing_diff % 180);
   }
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Difference between target heading (%d°) and current heading (%d°): %d°", heading, goingto, bearing_diff);
   int bearing_size = (int) bearing_diff / 6; // 180 degrees = 30 px (full height)
   GRect bearing_ind = GRect(42, bearing_size, 6, 30-bearing_size);
   graphics_context_set_fill_color(ctx, get_bar_color(30-bearing_size));
@@ -211,6 +213,7 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
   if (speed_size > 30) {
     speed_size = 30; // max speed about 54 km/h
   }
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Speed: %d", speed);
   GRect speed_ind = GRect(90, 30-speed_size, 6, speed_size);
   graphics_context_set_fill_color(ctx, get_bar_color(speed_size));
   graphics_fill_rect(ctx, speed_ind, 0, GCornerNone);
@@ -219,6 +222,7 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
   if (acc_size > 30) {
     acc_size = 30; // accuracy bar range from 0 to 120 m
   }
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Accuracy: %d", accuracy);
   GRect acc_ind = GRect(138, acc_size, 6, 30-acc_size);
   graphics_context_set_fill_color(ctx, get_bar_color(30-acc_size));
   graphics_fill_rect(ctx, acc_ind, 0, GCornerNone);
@@ -227,6 +231,7 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
 static void head_layer_update_callback(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, GColorBlack);
   if (distance <= accuracy) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance (%ld) less than accuracy (%d) - drawing circle", distance, accuracy);
     layer_set_hidden(text_layer_get_layer(target_layer), true);
     int radius = distance * 2;
     if (radius > max_radius) {
@@ -239,7 +244,9 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
   }
   else {
     layer_set_hidden(text_layer_get_layer(target_layer), false);
-    gpath_rotate_to(head_path, (TRIG_MAX_ANGLE / 360) * (heading - orientation));
+    int compass_heading = (TRIG_MAX_ANGLE / 360) * (heading - orientation);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance (%ld) more than accuracy (%d) - drawing arrow towards %d (%d)", distance, accuracy, (heading - orientation), compass_heading);
+    gpath_rotate_to(head_path, compass_heading);
     gpath_draw_filled(ctx, head_path);
   }
 }
@@ -263,7 +270,7 @@ static void send_message(const char *cmd, int32_t id) {
 }
 
 static void reset_handler(ClickRecognizerRef recognizer, void *context) {
-  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Reset");
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Reset");
   hints[3] = "Resetting target...";
   show_hint(3);
   text_layer_set_text(dist_layer, "0");
@@ -272,13 +279,12 @@ static void reset_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void menu_show_handler(ClickRecognizerRef recognizer, void *context) {
-  // layer_mark_dirty(menu_layer_get_layer(menu_layer)); // unnecessary?
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Show menu, %d items!", history_count);
   window_stack_push(menu_window, animated);
 }
 
 void out_sent_handler(DictionaryIterator *sent, void *context) {
-  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Message accepted by phone!");
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Message accepted by phone!");
   hints[3] = "Target set";
   hints[4] = NULL;
   show_hint(3);
@@ -317,7 +323,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     if (menu_layer) {
       layer_mark_dirty(menu_layer_get_layer(menu_layer));
     }
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Found places %lu (%d): %s/%s", place->id, place_index, place->title, place->subtitle);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Found place %ld (%d): %s/%s", place->id, place_index, place->title, place->subtitle);
   }
 
   Tuple *id_tuple = dict_find(iter, ID_KEY);
@@ -327,7 +333,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     int32_t idval = id_tuple->value->int32;
     if ((idval < 0) && (launch_reason() == APP_LAUNCH_TIMELINE_ACTION)) {
       uint32_t id = launch_get_args();
-      // APP_LOG(APP_LOG_LEVEL_DEBUG, "Launched from timeline, pin ID: %lu", id);
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Launched from timeline, pin ID: %ld", id);
       send_message(set_cmd, (int32_t) id);
       hints[3] = "Getting target information...";
       show_hint(3);
@@ -341,7 +347,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   if (head_tuple) {
     hints[3] = "Target set";
     heading = head_tuple->value->int16;
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated heading to %ld", heading);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated heading to %d", heading);
     static char target_text[6];
     snprintf(target_text, sizeof(target_text), "%d°", heading);
     text_layer_set_text(target_layer, target_text);
@@ -350,7 +356,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   Tuple *phead_tuple = dict_find(iter, PHONEHEAD_KEY);
   if (phead_tuple) {
     pheading = phead_tuple->value->int16;
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated phone heading to %ld", pheading);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated phone heading to %d", pheading);
     layer_mark_dirty(head_layer);
     layer_mark_dirty(info_layer);
   }
@@ -360,7 +366,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     static char acc_text[6];
     snprintf(acc_text, sizeof(acc_text), "%d m", (int) accuracy);
     text_layer_set_text(acc_layer, acc_text);
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated accuracy to %ld", accuracy);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated accuracy to %d", accuracy);
   }
   Tuple *speed_tuple = dict_find(iter, SPEED_KEY);
   if (speed_tuple) {
@@ -368,12 +374,12 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     static char speed_text[6];
     snprintf(speed_text, sizeof(speed_text), "%d", (int) speed);
     text_layer_set_text(speed_layer, speed_text);
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated speed to %ld", speed);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated speed to %d", speed);
   }
   Tuple *units_tuple = dict_find(iter, UNITS_KEY);
   if (units_tuple) {
     strcpy(units, units_tuple->value->cstring);
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Units: %s", units);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Units: %s", units);
   }
   Tuple *dist_tuple = dict_find(iter, DIST_KEY);
   if (dist_tuple) {
@@ -417,18 +423,18 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     compass_service_set_heading_filter(TRIG_MAX_ANGLE*sensitivity/360);
     compass_service_unsubscribe();
     compass_service_subscribe(&compass_heading_handler);
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Sensitivity: %d", sensitivity);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Sensitivity: %d", sensitivity);
   }
   static char dist_text[9];
   snprintf(dist_text, sizeof(dist_text), "%d %s", (int) show_dist, unit);
   text_layer_set_text(dist_layer, dist_text);
   show_hint(0);
-  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance updated: %d %s", (int) distance, text_layer_get_text(unit_layer));
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance updated: %s (%d)", text_layer_get_text(dist_layer), (int) distance);
 }
 
 void in_dropped_handler(AppMessageResult reason, void *context) {
   // incoming message dropped
-  APP_LOG(APP_LOG_LEVEL_WARNING, "Could not handle message from phone: %d, %d", reason, APP_MSG_INVALID_ARGS);
+  APP_LOG(APP_LOG_LEVEL_WARNING, "Could not handle message from phone: %d", reason);
 }
 
 static uint16_t menu_get_num_sections_callback(MenuLayer *menu_layer, void *data) {
@@ -436,6 +442,7 @@ static uint16_t menu_get_num_sections_callback(MenuLayer *menu_layer, void *data
 }
 
 static uint16_t menu_get_num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
+  APP_LOG(APP_LOG_LEVEL_WARNING, "Refreshing menu, %d items", history_count);
   return history_count;
 }
 
@@ -455,15 +462,15 @@ static void menu_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuI
 
 void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *data) {
   Place *place = &places[cell_index->row];
-  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Getting info for history place %lu", place->id);
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "SELECT pushed, getting info for history place %lu", place->id);
   send_message(set_cmd, place->id);
   window_stack_pop(animated);
 }
 
 static void click_config_provider(void *context) {
   window_single_click_subscribe(BUTTON_ID_SELECT, menu_show_handler);
-  window_single_click_subscribe(BUTTON_ID_UP, prev_hint_handler);
   window_long_click_subscribe(BUTTON_ID_SELECT, 0, reset_handler, NULL);
+  window_single_click_subscribe(BUTTON_ID_UP, prev_hint_handler);
   // window_long_click_subscribe(BUTTON_ID_UP, 0, reset_handler, NULL);
   window_single_click_subscribe(BUTTON_ID_DOWN, next_hint_handler);
   // window_long_click_subscribe(BUTTON_ID_DOWN, 0, reset_handler, NULL);
@@ -476,7 +483,6 @@ static void window_load(Window *window) {
   info_layer = layer_create(GRect(0, 0, bounds.size.w, 32));
   layer_set_update_proc(info_layer, info_layer_update_callback);
   layer_add_child(window_layer, info_layer);
-  // layer_mark_dirty(head_layer);
 
   head_layer = layer_create(bounds);
   layer_set_update_proc(head_layer, head_layer_update_callback);
@@ -563,7 +569,6 @@ static void window_load(Window *window) {
 
 static void window_unload(Window *window) {
   layer_destroy(head_layer);
-  // text_layer_destroy(unit_layer);
   text_layer_destroy(dist_layer);
   text_layer_destroy(target_layer);
   text_layer_destroy(track_layer);
@@ -599,7 +604,6 @@ static void menu_window_unload(Window *window) {
 
 
 static void init(void) {
-  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Launch reason: %d", launch_reason());
   hints[0] = "SELECT for history menu";
   hints[1] = "Long SELECT to set target";
   #ifdef PBL_COLOR
@@ -652,9 +656,6 @@ static void deinit(void) {
 
 int main(void) {
   init();
-
-  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Done initializing, pushed window: %p", window);
-
   app_event_loop();
   deinit();
 }
