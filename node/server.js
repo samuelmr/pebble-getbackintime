@@ -254,7 +254,7 @@ app.get('/:userToken/places/:max?', function(req, res) {
       return;
     }
     db.collection('places', function(er, collection) {
-      var query = {"user": userToken, "_id": {$lte: Math.pow(2, 32)-1}};
+      var query = {"user": userToken, "time": {$type: 1}};
       collection.find(query).sort({time: -1}).limit(max).toArray(function(err, places) {
         if (err) {
           console.warn('Failed to retrieve places from db: ' + err);
