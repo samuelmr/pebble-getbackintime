@@ -370,7 +370,8 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
       acc_unit = "y";
     }
     static char acc_text[6];
-    snprintf(acc_text, sizeof(acc_text), "%d %s", show_acc, acc_unit);
+    // snprintf(acc_text, sizeof(acc_text), "%d %s", show_acc, acc_unit);
+    snprintf(acc_text, sizeof(acc_text), "%d", show_acc);
     text_layer_set_text(acc_layer, acc_text);
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated accuracy to %d %s (%d)", show_acc, acc_unit, accuracy);
   }
