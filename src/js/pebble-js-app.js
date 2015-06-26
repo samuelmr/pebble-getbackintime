@@ -179,10 +179,10 @@ function appMessageNack(e) {
 }
 
 function locationSuccess(position) {
-  console.log("Got location " +
-    position.coords.latitude + ',' +
-    position.coords.longitude + ', heading at ' +
-    position.coords.heading);
+  // console.log("Got location " +
+  //   position.coords.latitude + ',' +
+  //   position.coords.longitude + ', heading at ' +
+  //   position.coords.heading);
   lat1 = position.coords.latitude;
   lon1 = position.coords.longitude;
   speed = position.coords.speed;
@@ -323,7 +323,7 @@ function calculate() {
       prevHead = head;
     }
     else {
-      console.log(dist + ' = ' + prevDist + ' and ' + head + ' = ' + prevHead + ', not enough movement');
+      // console.log(dist + ' = ' + prevDist + ' and ' + head + ' = ' + prevHead + ', not enough movement');
     }
   }
 }
