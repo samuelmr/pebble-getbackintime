@@ -28,6 +28,10 @@
 </fieldset>
 <input type="submit" value="Save configuration" />
 </form>
+<div id="troubleshooting">
+<h2>Troubleshooting</h2>
+<p>Everything not working as expected? See <a href="/{{userToken}}/?timelineToken={{conf.timelineToken}}#troubleshooting">troubleshooting</a>.</p>
+</div>
 <form method="post" action="place/new" id="add">
 <h2>Add new place manually</h2>
 <p>When you set a target using your Pebble (long press any button on the right),
@@ -194,7 +198,6 @@ you select them from the timeline.</p>
       if (!places[i]) {
        continue;
       }
-      console.log(places[i]);
       var li = document.createElement('li');
       if (places[i].time && Date.parse(places[i].time)) {
        var d = new Date(places[i].time);
