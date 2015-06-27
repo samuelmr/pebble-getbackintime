@@ -301,7 +301,7 @@ function calculate() {
     var x = Math.cos(l1)*Math.sin(l2) -
             Math.sin(l1)*Math.cos(l2)*Math.cos(dLon);
     head = toDeg(Math.round(Math.atan2(y, x))) % 360;
-    if (head < 0) {
+    while (head < 0) {
       head += 360;
     }
     if ((dist != prevDist) || (head != prevHead)) {
@@ -312,8 +312,8 @@ function calculate() {
              "speed": 0,
              "units": units,
              "sens": parseInt(sens)};
-      if ((speed > 0) && (!isNaN(phoneHead))) {
-        // enough movement to calculate speed and heading
+      if ((speed > 0) && (!isNaN(phoneHead)) && (accuracy < 40)) {
+        // enough movement and accuracy to calculate speed and heading
         msg.phonehead = phoneHead;
         msg.speed = speed;
       }

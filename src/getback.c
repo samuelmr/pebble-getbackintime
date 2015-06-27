@@ -172,7 +172,7 @@ void compass_heading_handler(CompassHeadingData heading_data){
       }
       // orientation = heading_data.true_heading;
       orientation = (360 - TRIGANGLE_TO_DEG(heading_data.magnetic_heading))%360;
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "Magnetic heading: %d, orientation %d°",(int) heading_data.magnetic_heading, orientation);
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Magnetic heading: %d (deg %ld), orientation %d°",(int) heading_data.magnetic_heading, TRIGANGLE_TO_DEG(heading_data.magnetic_heading), orientation);
       layer_mark_dirty(head_layer);
       layer_mark_dirty(info_layer);
       return;
@@ -190,19 +190,23 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
+
   int goingto = orientation;
-  
-  static char bearing_text[6] = "---";
+  static char *bearing_text = "---";
+
   if (pheading > 0) {
     goingto = pheading%360;
-    snprintf(bearing_text, sizeof(bearing_text), "%d°", goingto);
+    snprintf(bearing_text, sizeof(&bearing_text), "%d°", goingto);
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Phone heading exists, moving to %d", goingto);
+  }
+  else {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "No phone heading, bearing_text: %s", bearing_text);    
   }
   int bearing_diff = abs((int) (goingto - heading));
   if (bearing_diff > 180) {
     bearing_diff = 180 - (bearing_diff % 180);
   }
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Difference between target heading (%d°) and current heading (%d°): %d°", heading, goingto, bearing_diff);
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Difference between target heading (%d°) and current heading (%d°): %d°", heading, goingto, bearing_diff);
   int bearing_size = (int) bearing_diff / 6; // 180 degrees = 30 px (full height)
   GRect bearing_ind = GRect(42, bearing_size, 6, 30-bearing_size);
   graphics_context_set_fill_color(ctx, get_bar_color(30-bearing_size));
@@ -231,7 +235,7 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
 static void head_layer_update_callback(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, GColorBlack);
   if (distance <= accuracy) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance (%ld) less than accuracy (%d) - drawing circle", distance, accuracy);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance (%ld) less than accuracy (%d) - drawing circle", distance, accuracy);
     layer_set_hidden(text_layer_get_layer(target_layer), true);
     int radius = distance * 2;
     if (radius > max_radius) {
@@ -245,10 +249,11 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
   else {
     layer_set_hidden(text_layer_get_layer(target_layer), false);
     int compass_heading = (TRIG_MAX_ANGLE / 360) * (heading - orientation);
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance (%ld) more than accuracy (%d) - drawing arrow towards %d (%d)", distance, accuracy, (heading - orientation), compass_heading);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance (%ld) more than accuracy (%d) - drawing arrow towards %d (%d)", distance, accuracy, (heading - orientation), compass_heading);
     gpath_rotate_to(head_path, compass_heading);
     gpath_draw_filled(ctx, head_path);
   }
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Orientation %d, heading %d, phone heading %d, compass heading %d", orientation, heading, pheading, (heading - orientation));
 }
 
 static void send_message(const char *cmd, int32_t id) {
@@ -348,17 +353,49 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     hints[3] = "Target set";
     heading = head_tuple->value->int16;
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated heading to %d", heading);
-    static char target_text[6];
-    snprintf(target_text, sizeof(target_text), "%d°", heading);
+    static char *target_text = "---";
+    // snprintf(target_text, sizeof(&target_text), "%d°", heading);
+    if (heading < 0) {
+      APP_LOG(APP_LOG_LEVEL_WARNING, "Negative heading %d", heading);
+      target_text = "N";
+    }
+    if (heading < 22.5) {
+      target_text = "N";
+    }
+    else if (heading < 67.5) {
+      target_text = "NE";
+    }
+    else if (heading < 112.5) {
+      target_text = "E";
+    }
+    else if (heading < 157.5) {
+      target_text = "SE";
+    }
+    else if (heading < 202.5) {
+      target_text = "S";
+    }
+    else if (heading < 247.5) {
+      target_text = "SW";
+    }
+    else if (heading < 292.5) {
+      target_text = "W";
+    }
+    else if (heading < 337.5) {
+      target_text = "NW";
+    }
     text_layer_set_text(target_layer, target_text);
     layer_mark_dirty(head_layer);
+    layer_mark_dirty(info_layer);
+  }
+  Tuple *units_tuple = dict_find(iter, UNITS_KEY);
+  if (units_tuple) {
+    strcpy(units, units_tuple->value->cstring);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Units: %s", units);
   }
   Tuple *phead_tuple = dict_find(iter, PHONEHEAD_KEY);
   if (phead_tuple) {
     pheading = phead_tuple->value->int16;
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated phone heading to %d", pheading);
-    layer_mark_dirty(head_layer);
-    layer_mark_dirty(info_layer);
   }
   Tuple *acc_tuple = dict_find(iter, ACCURACY_KEY);
   if (acc_tuple) {
@@ -378,15 +415,12 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   Tuple *speed_tuple = dict_find(iter, SPEED_KEY);
   if (speed_tuple) {
     speed = speed_tuple->value->int16;
-    static char speed_text[6];
-    snprintf(speed_text, sizeof(speed_text), "%d", (int) speed);
+    static char speed_text[6] = "";
+    if (speed >= 0) {
+      snprintf(speed_text, sizeof(speed_text), "%d", (int) speed);
+    }
     text_layer_set_text(speed_layer, speed_text);
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated speed to %d", speed);
-  }
-  Tuple *units_tuple = dict_find(iter, UNITS_KEY);
-  if (units_tuple) {
-    strcpy(units, units_tuple->value->cstring);
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Units: %s", units);
   }
   Tuple *dist_tuple = dict_find(iter, DIST_KEY);
   if (dist_tuple) {
