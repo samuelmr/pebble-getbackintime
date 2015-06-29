@@ -9,6 +9,7 @@ static TextLayer *dist_layer;
 static TextLayer *hint_layer;
 static TextLayer *track_layer;
 static TextLayer *target_layer;
+static TextLayer *target2_layer;
 static TextLayer *track_label_layer;
 static TextLayer *speed_layer;
 static TextLayer *speed_label_layer;
@@ -192,15 +193,17 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
 
   int goingto = orientation;
-  static char *bearing_text = "---";
+  static char *bearing_text = "    ";
 
   if (pheading > 0) {
     goingto = pheading%360;
-    snprintf(bearing_text, sizeof(&bearing_text), "%d°", goingto);
+    // snprintf(bearing_text, sizeof(&bearing_text), "%d°", goingto);
+    snprintf(bearing_text, 5, "%d°", goingto);
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Phone heading exists, moving to %d", goingto);
   }
   else {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "No phone heading, bearing_text: %s", bearing_text);    
+    bearing_text = "~";
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "No phone heading, bearing_text: %s, going to %d", bearing_text, goingto);
   }
   int bearing_diff = abs((int) (goingto - heading));
   if (bearing_diff > 180) {
@@ -237,6 +240,7 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
   if (distance <= accuracy) {
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance (%ld) less than accuracy (%d) - drawing circle", distance, accuracy);
     layer_set_hidden(text_layer_get_layer(target_layer), true);
+    layer_set_hidden(text_layer_get_layer(target2_layer), true);
     int radius = distance * 2;
     if (radius > max_radius) {
       radius = max_radius;
@@ -248,6 +252,7 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
   }
   else {
     layer_set_hidden(text_layer_get_layer(target_layer), false);
+    layer_set_hidden(text_layer_get_layer(target2_layer), false);
     int compass_heading = (TRIG_MAX_ANGLE / 360) * (heading - orientation);
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance (%ld) more than accuracy (%d) - drawing arrow towards %d (%d)", distance, accuracy, (heading - orientation), compass_heading);
     gpath_rotate_to(head_path, compass_heading);
@@ -279,7 +284,7 @@ static void reset_handler(ClickRecognizerRef recognizer, void *context) {
   hints[3] = "Resetting target...";
   show_hint(3);
   text_layer_set_text(dist_layer, "0");
-  text_layer_set_text(track_layer, "0°");
+  text_layer_set_text(track_layer, "~");
   send_message(set_cmd, -1); // current location
 }
 
@@ -329,6 +334,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
       layer_mark_dirty(menu_layer_get_layer(menu_layer));
     }
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Found place %ld (%d): %s/%s", place->id, place_index, place->title, place->subtitle);
+    hints[0] = "SELECT for history menu";
   }
 
   Tuple *id_tuple = dict_find(iter, ID_KEY);
@@ -353,37 +359,39 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     hints[3] = "Target set";
     heading = head_tuple->value->int16;
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated heading to %d", heading);
-    static char *target_text = "---";
-    // snprintf(target_text, sizeof(&target_text), "%d°", heading);
+    static char *target_text = "----";
+    static char *target2_text = "---";
+    snprintf(target_text, sizeof(&target_text), "%d°", heading);
     if (heading < 0) {
       APP_LOG(APP_LOG_LEVEL_WARNING, "Negative heading %d", heading);
-      target_text = "N";
+      target2_text = "N";
     }
     if (heading < 22.5) {
-      target_text = "N";
+      target2_text = "N";
     }
     else if (heading < 67.5) {
-      target_text = "NE";
+      target2_text = "NE";
     }
     else if (heading < 112.5) {
-      target_text = "E";
+      target2_text = "E";
     }
     else if (heading < 157.5) {
-      target_text = "SE";
+      target2_text = "SE";
     }
     else if (heading < 202.5) {
-      target_text = "S";
+      target2_text = "S";
     }
     else if (heading < 247.5) {
-      target_text = "SW";
+      target2_text = "SW";
     }
     else if (heading < 292.5) {
-      target_text = "W";
+      target2_text = "W";
     }
     else if (heading < 337.5) {
-      target_text = "NW";
+      target2_text = "NW";
     }
     text_layer_set_text(target_layer, target_text);
+    text_layer_set_text(target2_layer, target2_text);
     layer_mark_dirty(head_layer);
     layer_mark_dirty(info_layer);
   }
@@ -549,6 +557,14 @@ static void window_load(Window *window) {
   text_layer_set_text(target_layer, "");
   layer_add_child(window_layer, text_layer_get_layer(target_layer));
   
+  target2_layer = text_layer_create(GRect(bounds.size.w-48, 32, 48, 35));
+  text_layer_set_font(target2_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
+  text_layer_set_text_color(target2_layer, GColorBlack);
+  text_layer_set_background_color(target2_layer, GColorClear);
+  text_layer_set_text_alignment(target2_layer, GTextAlignmentCenter);
+  text_layer_set_text(target2_layer, "");
+  layer_add_child(window_layer, text_layer_get_layer(target2_layer));
+  
   hint_layer_size = GRect(0, bounds.size.h-15, bounds.size.w, 15);
   hint_layer = text_layer_create(hint_layer_size);
   text_layer_set_font(hint_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
@@ -612,6 +628,7 @@ static void window_unload(Window *window) {
   layer_destroy(head_layer);
   text_layer_destroy(dist_layer);
   text_layer_destroy(target_layer);
+  text_layer_destroy(target2_layer);
   text_layer_destroy(track_layer);
   text_layer_destroy(track_label_layer);
   text_layer_destroy(speed_layer);
@@ -645,7 +662,7 @@ static void menu_window_unload(Window *window) {
 
 
 static void init(void) {
-  hints[0] = "SELECT for history menu";
+  hints[0] = "Loading history...";
   hints[1] = "Long SELECT to set target";
   #ifdef PBL_COLOR
     approaching = GColorMintGreen;
