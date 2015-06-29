@@ -73,19 +73,18 @@ select <tt>SETTINGS</tt> (or the gear icon) for <tt>Get Back in Time</tt> app an
 to the end of the configuration screen.</p>
 <h3>Example JSON</h3>
 <code>{
+  // insert your personal timeline token here
+  "timelineToken": '<span class="codetoken">{{timelineToken}}</span>',
+  "time": "2015-04-29T16:07:22Z",
   "position": {
     "coords": {
       "latitude": 60.9,
       "longitude": 24.1
     }
   },
-  "time": "2015-04-29T16:07:22Z",
-  // insert your personal timeline token here
-  "timelineToken": '<span class="codetoken">{{timelineToken}}</span>',
   pin {
-    // you shouldn't specify an id 
-    // but if you do, it must be a unique integer
-    "id": "1",
+    // you can specify an id but it will be overridden 
+    // "id": "1",
     "time": "2015-04-29T16:07:22Z",
     "layout": {
       "type": "genericPin",
