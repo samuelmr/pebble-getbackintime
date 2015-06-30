@@ -8,7 +8,7 @@ var lon2 = parseFloat(localStorage.getItem("lon2")) || null;
 var interval = parseInt(localStorage.getItem("interval")) || 0;
 var units = localStorage.getItem("units") || "metric";
 var sens = parseInt(localStorage.getItem("sens")) || 5;
-var userToken = "-";
+var userToken = localStorage.getItem("userToken") || "-";
 var timelineToken = localStorage.getItem("timelineToken") || "";
 var speed = 0;
 var accuracy = 0;
@@ -32,6 +32,7 @@ var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oc
 
 Pebble.addEventListener("ready", function(e) {
   userToken = Pebble.getAccountToken() || "-";
+  localStorage.setItem("userToken", userToken);
   if ((lat2 === null) || (lon2 === null)) {
     storeCurrentPosition();
   }
@@ -182,7 +183,8 @@ function locationSuccess(position) {
   console.log("Got location " +
     position.coords.latitude + ',' +
     position.coords.longitude + ', heading at ' +
-    position.coords.heading);
+    position.coords.heading + ', accuracy ' +
+    position.coords.accuracy);
   lat1 = position.coords.latitude;
   lon1 = position.coords.longitude;
   speed = position.coords.speed;
