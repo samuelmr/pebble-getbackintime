@@ -56,9 +56,13 @@ function pushPin(place, res) {
   var pin;
   // var pinID = parseInt(place._id.toHexString(), 16);
   var pinID = place._id.toString();
+  var pinTime = place.pin.time || place.time || null;
   if (place.pin) {
     place.pin.id = pinID;
-    place.pin.time = new Date(place.pin.time || place.time);
+    place.pin.time = new Date(pinTime);
+    for (var i=0; i<place.pin.reminders.length; i++) {
+      place.pin.reminders[i].time = new Date(place.pin.reminders[i].time);
+    }
     console.log(place.pin);
     try {
      pin = new Timeline.Pin(place.pin);
@@ -73,7 +77,7 @@ function pushPin(place, res) {
   else {
     pin = new Timeline.Pin({
       id: pinID,
-      time: new Date(place.time),
+      time: new Date(pinTime),
       layout: new Timeline.Pin.Layout({
         type: Timeline.Pin.LayoutType.GENERIC_PIN,
         tinyIcon: Timeline.Pin.Icon.PIN,
@@ -81,23 +85,25 @@ function pushPin(place, res) {
         body: 'Set from watch'
       })
     });
-    console.log(pin);
+    console.log(JSON.stringify(pin));
   }
   pin.addAction(new Timeline.Pin.Action({
     title: 'Get Back',
     type: Timeline.Pin.ActionType.OPEN_WATCH_APP,
     launchCode: parseInt(place._id)
   }));
-  pin.createNotification = new Timeline.Pin.Notification(
-    {
-      "layout": {
-        "type": "genericNotification",
-        "title": pin.layout.title || "Get Back target",
-        "tinyIcon": "system://images/NOTIFICATION_FLAG",
-        "body": "A new target added from watch."
+  if (!place.pin || !place.pin.createNotification) {
+    pin.createNotification = new Timeline.Pin.Notification(
+      {
+        "layout": {
+          "type": "genericNotification",
+          "title": pin.layout.title || "Get Back target",
+          "tinyIcon": "system://images/NOTIFICATION_FLAG",
+          "body": "A new target added from watch."
+        }
       }
-    }
-  );
+    );
+  }
   place.pin = pin;
   console.log(place);
 
