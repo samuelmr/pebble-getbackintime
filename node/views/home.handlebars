@@ -43,7 +43,8 @@ up-to-date heading and distance to your target.</p>
   <ul>
    <li>Is your phone moving with you? Your location is based on the location of your phone.</li>
    <li>Open the settings (from the Pebble app in your phone) and set update interval to something else than automatic. (Automatic doesn't work for all iOS devices.)</li>
-   <li>Is the location accurate enough? If "gps acc." field shows a value greater than 50 (or greater than the distance to your target), your position cannot be determined reliably.</li>
+   <li>If you're using iOS (iPhone, iPad, iPod) make sure that the Pebble app is allowed to get your location. Go to Settings → Pebble Time (or Pebble, if you're using original Pebble or Pebble Steel) and make sure that the Location setting is set to Always.</p>
+   <li>Is the location accurate enough? If "gps acc." field shows a value greater than 50 (or greater than the distance to your target), your position and distance to your target cannot be determined reliably.</li>
    <li>Does your phone have a clear visibility to the sky?</li>
    <li>If you open any map application on your phone, can you see yourself moving on the map?</li>
   </ul>
@@ -82,7 +83,7 @@ to the end of the configuration screen.</p>
       "longitude": 24.1
     }
   },
-  pin {
+  "pin": {
     // you can specify an id but it will be overridden 
     // "id": "1",
     "time": "2015-04-29T16:07:22Z",
@@ -96,6 +97,7 @@ to the end of the configuration screen.</p>
     "createNotification": {
       "layout": {
         "type": "genericNotification",
+        "tinyIcon": "system://images/NOTIFICATION_FLAG",
         "title": "Car location stored!",
         "body": "This pin was sent from Amazing Parking App."
       }
