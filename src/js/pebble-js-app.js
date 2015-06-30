@@ -179,10 +179,10 @@ function appMessageNack(e) {
 }
 
 function locationSuccess(position) {
-  // console.log("Got location " +
-  //   position.coords.latitude + ',' +
-  //   position.coords.longitude + ', heading at ' +
-  //   position.coords.heading);
+  console.log("Got location " +
+    position.coords.latitude + ',' +
+    position.coords.longitude + ', heading at ' +
+    position.coords.heading);
   lat1 = position.coords.latitude;
   lon1 = position.coords.longitude;
   speed = position.coords.speed;
@@ -442,6 +442,7 @@ function startWatcher() {
     console.log('Interval is ' + interval + ', using getCurrentPosition and setInterval');
     navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
     locationInterval = setInterval(function() {
+      console.log('Interval of ' + interval + ' seconds passed');
       navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
     }, interval * 1000);      
   }

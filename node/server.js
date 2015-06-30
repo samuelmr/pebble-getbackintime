@@ -60,10 +60,12 @@ function pushPin(place, res) {
   if (place.pin) {
     place.pin.id = pinID;
     place.pin.time = new Date(pinTime);
-    for (var i=0; i<place.pin.reminders.length; i++) {
-      place.pin.reminders[i].time = new Date(place.pin.reminders[i].time);
+    if (place.pin.reminders) {
+      for (var i=0; i<place.pin.reminders.length; i++) {
+        place.pin.reminders[i].time = new Date(place.pin.reminders[i].time);
+      }
+      console.log(place.pin);
     }
-    console.log(place.pin);
     try {
      pin = new Timeline.Pin(place.pin);
     }
@@ -196,6 +198,7 @@ app.post('/:userToken/place/new', function(req, res) {
             });
           }
           else {
+            console.warn('Failed again to save place into db: ' + err);
             res.status(400);
             res.send('Failed to save place into db: ' + err);
             return;
