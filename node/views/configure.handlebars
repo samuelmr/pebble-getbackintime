@@ -58,6 +58,11 @@ you select them from the timeline.</p>
  var f = document.getElementById('configform');
  var tokenDiv = document.getElementById('tok');
  f.onsubmit = sendConfig;
+ var imp = document.getElementById('imperial');
+ var met = document.getElementById('metric');
+ var fa = document.getElementById('fast');
+ var no = document.getElementById('normal');
+ var sl = document.getElementById('slow');
  var conf;
  var userToken = '{{userToken}}';
  var timelineToken;
@@ -146,96 +151,112 @@ you select them from the timeline.</p>
    // console.log(JSON.stringify(obj));
    req.send(JSON.stringify(obj));
   };
-  navigator.geolocation.getCurrentPosition(function(pos) {
-   af.lat.value = pos.coords.latitude;
-   af.lon.value = pos.coords.longitude;
-  });
-  af.style.display = 'block';
-  var h = document.createElement('h2');
-  h.appendChild(document.createTextNode('Add places using the API'));
-  tokenDiv.appendChild(h);
-  var p = document.createElement('p');
-  var a = document.createElement('a');
-  a.appendChild(document.createTextNode('See API manual'));
-  a.href = '/' + userToken + '/?timelineToken=' + timelineToken;
-  p.appendChild(a);
-  tokenDiv.appendChild(p);
-  var text = document.createTextNode('Your Pebble account token is ');
-  var tt = document.createElement('tt');
-  tt.appendChild(document.createTextNode(userToken));
-  p = document.createElement('p');
-  p.appendChild(text);
-  p.appendChild(tt);
-  p.appendChild(document.createTextNode(' '));
-  tokenDiv.appendChild(p);
-  if (timelineToken) {
-   p = document.createElement('p');
-   var text = document.createTextNode('Your Pebble timeline token is ');
+  // getPosition();
+  getHistory();
+  setTokens();
+  
+  function setTokens() {
+   af.style.display = 'block';
+   var h = document.createElement('h2');
+   h.appendChild(document.createTextNode('Add places using the API'));
+   tokenDiv.appendChild(h);
+   var p = document.createElement('p');
+   var a = document.createElement('a');
+   a.appendChild(document.createTextNode('See API manual'));
+   a.href = '/' + userToken + '/?timelineToken=' + timelineToken;
+   p.appendChild(a);
+   tokenDiv.appendChild(p);
+   var text = document.createTextNode('Your Pebble account token is ');
    var tt = document.createElement('tt');
-   tt.appendChild(document.createTextNode(timelineToken));
+   tt.appendChild(document.createTextNode(userToken));
    p = document.createElement('p');
    p.appendChild(text);
    p.appendChild(tt);
    p.appendChild(document.createTextNode(' '));
    tokenDiv.appendChild(p);
-  }
-  p = document.createElement('p');
-  a = document.createElement('a');
-  a.href = 'mailto:?subject=Pebble%20account%20Token&body=' +
-   'Your%20Pebble%20account%20token%20is%20' + userToken;
-  if (timelineToken) {
-   a.href += '%20and%20your%20Pebble%20timeline%20token%20is%20' + timelineToken;
-  }
-  a.appendChild(document.createTextNode('Send token' + (timelineToken ? 's' : '') + ' by mail'));
-  p.appendChild(a);
-  p.appendChild(document.createTextNode(' (or just save as draft from which you can copy and paste)'));
-  tokenDiv.appendChild(p);
-  tokenDiv.style.display = 'block';
-  
-  // get token's history
-  var req = new XMLHttpRequest();
-  req.onload = function() {
-   if ((this.status == 200) && (this.responseText.substr(0, 1) == '[')) {
-    var places = JSON.parse(this.responseText);
-    if (places && places.length) {
-     var div = document.createElement('div');
-     div.className = 'history';
-     var h2 = document.createElement('h2');
-     h2.appendChild(document.createTextNode('Location history'));
-     div.appendChild(h2);
-     var ul = document.createElement('ul');
-     for (var i=0; i<places.length; i++) {
-      if (!places[i]) {
-       continue;
-      }
-      var li = document.createElement('li');
-      if (places[i].time && Date.parse(places[i].time)) {
-       var d = new Date(places[i].time);
-       var dStr = (d.getMonth()+1) + '/' + 
-                  d.getDate() + ' ' + 
-                  d.getHours() + ':' + 
-                  d.getMinutes() + ' ';
-       li.appendChild(document.createTextNode(dStr));
-      }
-      if (places[i].pin && places[i].pin.layout && places[i].pin.layout.title) {
-       li.appendChild(document.createTextNode(places[i].pin.layout.title));
-      }
-      if (places[i].position && places[i].position.coords) {
-       var latlon = places[i].position.coords.latitude + ', ' + 
-                    places[i].position.coords.longitude;
-       li.appendChild(document.createTextNode(' (' + latlon + ')'));
-      }
-      li.setAttribute('data-position', latlon);
-      li.onclick = sendMe;
-      ul.appendChild(li);
-     }
-     div.appendChild(ul);
-     tokenDiv.appendChild(div);
-    }
+   if (timelineToken) {
+    p = document.createElement('p');
+    var text = document.createTextNode('Your Pebble timeline token is ');
+    var tt = document.createElement('tt');
+    tt.appendChild(document.createTextNode(timelineToken));
+    p = document.createElement('p');
+    p.appendChild(text);
+    p.appendChild(tt);
+    p.appendChild(document.createTextNode(' '));
+    tokenDiv.appendChild(p);
    }
-  };
-  req.open('GET', '/' + userToken + '/places/20');
-  req.send();
+   p = document.createElement('p');
+   a = document.createElement('a');
+   a.href = 'mailto:?subject=Pebble%20account%20Token&body=' +
+    'Your%20Pebble%20account%20token%20is%20' + userToken;
+   if (timelineToken) {
+    a.href += '%20and%20your%20Pebble%20timeline%20token%20is%20' + timelineToken;
+   }
+   a.appendChild(document.createTextNode('Send token' + (timelineToken ? 's' : '') + ' by mail'));
+   p.appendChild(a);
+   p.appendChild(document.createTextNode(' (or just save as draft from which you can copy and paste)'));
+   tokenDiv.appendChild(p);
+   tokenDiv.style.display = 'block';
+  }
+
+  function getPosition() {
+   if (!af.lat.value) {
+    navigator.geolocation.getCurrentPosition(function(pos) {
+     af.lat.value = pos.coords.latitude;
+     af.lon.value = pos.coords.longitude;
+    },
+    function(err) {
+      console.log(err);
+    },
+    {timeout: 15000, maximumAge: 5000, enableHighAccuracy: true });
+   }
+  }
+  function getHistory() {
+   // get token's history
+   var req = new XMLHttpRequest();
+   req.onload = function() {
+    if ((this.status == 200) && (this.responseText.substr(0, 1) == '[')) {
+     var places = JSON.parse(this.responseText);
+     if (places && places.length) {
+      var div = document.createElement('div');
+      div.className = 'history';
+      var h2 = document.createElement('h2');
+      h2.appendChild(document.createTextNode('Location history'));
+      div.appendChild(h2);
+      var ul = document.createElement('ul');
+      for (var i=0; i<places.length; i++) {
+       if (!places[i]) {
+        continue;
+       }
+       var li = document.createElement('li');
+       if (places[i].time && Date.parse(places[i].time)) {
+        var d = new Date(places[i].time);
+        var dStr = (d.getMonth()+1) + '/' + 
+                   d.getDate() + ' ' + 
+                   d.getHours() + ':' + 
+                   d.getMinutes() + ' ';
+        li.appendChild(document.createTextNode(dStr));
+       }
+       if (places[i].pin && places[i].pin.layout && places[i].pin.layout.title) {
+        li.appendChild(document.createTextNode(places[i].pin.layout.title));
+       }
+       if (places[i].position && places[i].position.coords) {
+        var latlon = places[i].position.coords.latitude + ', ' + 
+                     places[i].position.coords.longitude;
+        li.appendChild(document.createTextNode(' (' + latlon + ')'));
+       }
+       li.setAttribute('data-position', latlon);
+       li.onclick = sendMe;
+       ul.appendChild(li);
+      }
+      div.appendChild(ul);
+      tokenDiv.parentNode.appendChild(div);
+     }
+    }
+   };
+   req.open('GET', '/' + userToken + '/places/20');
+   req.send();
+  }
  }
  function sendMe() {
   chosenPos = this.getAttribute('data-position');
@@ -245,10 +266,17 @@ you select them from the timeline.</p>
  function sendConfig(e) {
   e.preventDefault();
   var config = {
-   units: f.units.value,
-   interval: f.interval.value,
-   sens: f.sens.value
+   units: (imp.checked ? imp.value : met.value),
+   interval: f.interval[f.interval.selectedIndex].value,
+   sens: 5
   };
+  if (fa.checked) {
+    units.sens = fa.value;
+  }
+  if (sl.checked) {
+    units.sens = sl.value;
+  }
+  alert(config.units);
   if (chosenPos) {
    config.chosenPos = chosenPos;
   }
