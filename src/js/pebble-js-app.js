@@ -123,6 +123,9 @@ Pebble.addEventListener("webviewclosed",
     interval = parseInt(options.interval) || 0;
     localStorage.setItem("interval", interval);
     console.log("Interval set to: " + interval);
+    if (interval > 1) {
+      locationOptions.timeout = (interval - 1) * 1000;
+    }
     sens = parseInt(options.sens) || 5;
     localStorage.setItem("sens", sens);
     console.log("Sentitivity set to: " + sens);
