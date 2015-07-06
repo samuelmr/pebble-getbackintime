@@ -125,6 +125,35 @@ to the end of the configuration screen.</p>
   },
 }
 </code>
+<h3>Command line example</h3>
+<code>
+export USERTOKEN=123456789
+export TIMELINETOKEN=123456789ABCDEF
+cat &gt; test.json &lt;&lt;EOF
+{
+  "timelineToken": "$TIMELINETOKEN",
+  "time": "2015-04-29T16:07:22Z",
+  "position": {
+    "coords": {
+      "latitude": 12.345,
+      "longitude": 123.456
+    }
+  },
+  "pin": {
+    "layout": {
+      "type": "genericPin",
+      "tinyIcon": "system://images/NOTIFICATION_FLAG",
+      "title": "CLI test",
+      "subtitle": "Get Back in Time",
+      "body": "Testing the API from command line."
+    }
+  }
+}
+EOF
+curl -X POST http://getback.timelinepush.com/$USERTOKEN/place/new \
+--header "Content-Type: application/json" \
+-d @test.json
+</code>
 <h3>Example API call with JavaScript</h3>
 <code>// place your own account token here!
 var userToken = '<span class="codetoken">{{userToken}}</span>';
