@@ -197,7 +197,6 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
 
   if (pheading > 0) {
     goingto = pheading%360;
-    // snprintf(bearing_text, sizeof(&bearing_text), "%d°", goingto);
     snprintf(bearing_text, 5, "%d°", goingto);
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Phone heading exists, moving to %d", goingto);
   }
@@ -361,7 +360,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated heading to %d", heading);
     static char *target_text = "----";
     static char *target2_text = "---";
-    snprintf(target_text, sizeof(&target_text), "%d°", heading);
+    snprintf(target_text, 5, "%d°", heading);
     if (heading < 0) {
       APP_LOG(APP_LOG_LEVEL_WARNING, "Negative heading %d", heading);
       target2_text = "N";
