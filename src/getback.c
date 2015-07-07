@@ -193,16 +193,14 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
 
   int goingto = orientation;
-  static char *bearing_text = "    ";
-
+  static char bearing_text[6] = "~";
   if (pheading > 0) {
     goingto = pheading%360;
-    snprintf(bearing_text, 5, "%d°", goingto);
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Phone heading exists, moving to %d", goingto);
+    snprintf(bearing_text, sizeof(bearing_text), "%d°", goingto);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Phone heading exists, moving to %d", goingto);
   }
   else {
-    bearing_text = "~";
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "No phone heading, bearing_text: %s, going to %d", bearing_text, goingto);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "No phone heading, bearing_text: %s, going to %d", bearing_text, goingto);
   }
   int bearing_diff = abs((int) (goingto - heading));
   if (bearing_diff > 180) {
@@ -219,7 +217,7 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
   if (speed_size > 30) {
     speed_size = 30; // max speed about 54 km/h
   }
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Speed: %d", speed);
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Speed: %d", speed);
   GRect speed_ind = GRect(90, 30-speed_size, 6, speed_size);
   graphics_context_set_fill_color(ctx, get_bar_color(speed_size));
   graphics_fill_rect(ctx, speed_ind, 0, GCornerNone);
@@ -228,7 +226,7 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
   if (acc_size > 30) {
     acc_size = 30; // accuracy bar range from 0 to 120 m
   }
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Accuracy: %d", accuracy);
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Accuracy: %d", accuracy);
   GRect acc_ind = GRect(138, acc_size, 6, 30-acc_size);
   graphics_context_set_fill_color(ctx, get_bar_color(30-acc_size));
   graphics_fill_rect(ctx, acc_ind, 0, GCornerNone);
@@ -358,9 +356,9 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     hints[3] = "Target set";
     heading = head_tuple->value->int16;
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated heading to %d", heading);
-    static char *target_text = "----";
+    static char target_text[6];
+    snprintf(target_text, sizeof(target_text), "%d°", heading);
     static char *target2_text = "---";
-    snprintf(target_text, 5, "%d°", heading);
     if (heading < 0) {
       APP_LOG(APP_LOG_LEVEL_WARNING, "Negative heading %d", heading);
       target2_text = "N";
@@ -414,7 +412,6 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
       acc_unit = "y";
     }
     static char acc_text[6];
-    // snprintf(acc_text, sizeof(acc_text), "%d %s", show_acc, acc_unit);
     snprintf(acc_text, sizeof(acc_text), "%d", show_acc);
     text_layer_set_text(acc_layer, acc_text);
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated accuracy to %d %s (%d)", show_acc, acc_unit, accuracy);
