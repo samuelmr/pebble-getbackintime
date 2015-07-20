@@ -1,7 +1,7 @@
 #include <pebble.h>
 
 #define MAX_PLACE_COUNT 20
-#define MAX_HINT_COUNT 5
+#define MAX_HINT_COUNT 6
 
 static Window *window;
 static Window *menu_window;
@@ -17,19 +17,21 @@ static TextLayer *acc_layer;
 static TextLayer *acc_label_layer;
 static Layer *head_layer;
 static Layer *info_layer;
-char *hints[MAX_HINT_COUNT];
-int current_hint = 0;
-int32_t distance = 0;
-int16_t heading = 0;
-int16_t pheading = -1;
-int16_t speed = 0;
-int16_t accuracy = 0;
-int16_t orientation = 0;
+static char *hints[MAX_HINT_COUNT];
+static int current_hint = 0;
+static int32_t distance = 0;
+static int16_t heading = 0;
+static int16_t pheading = -1;
+static int16_t speed = 0;
+static int16_t accuracy = 0;
+static int16_t orientation = 0;
 static int16_t history_count = 0;
 // update screen only when heading changes at least <sensitivity> degrees
 // this is overridden by settings
-int sensitivity = 1;
-const bool animated = true;
+static int sensitivity = 1;
+static const bool animated = true;
+static bool initialized = false;
+static time_t location_updated;
 static const uint32_t CMD_KEY = 1;
 static const uint32_t HEAD_KEY = 2;
 static const uint32_t DIST_KEY = 3;
@@ -50,14 +52,13 @@ static GPoint needle_axis;
 static GRect hint_layer_size;
 static const double YARD_LENGTH = 0.9144;
 static const double YARDS_IN_MILE = 1760;
-AppTimer *current_timer;
+static AppTimer *current_timer;
 static MenuLayer *menu_layer;
-ClickConfigProvider previous_ccp;
 
-GColor approaching;
-GColor receding;
-GColor bg;
-int max_radius;
+static GColor approaching;
+static GColor receding;
+static GColor bg;
+static int max_radius;
 
 static void click_config_provider(void *context);
 
@@ -122,7 +123,19 @@ static void reset_dist_bg(void *data) {
 }
 
 static void show_hint(int index) {
-  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing hint: %d", index);  
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing hint: %d", index);
+  if (!initialized) {
+    text_layer_set_text(hint_layer, "Loading data...");
+    return;
+  }
+  if(!bluetooth_connection_service_peek()) {
+    text_layer_set_text(hint_layer, "Phone connection lost!");
+    return;
+  }
+  if (index == (MAX_HINT_COUNT - 1)) {
+    int seconds = time(NULL) - location_updated;
+    snprintf(hints[index], 28, "Updated %d seconds ago", seconds);
+  }
   if (hints[index]) {
     text_layer_set_text(hint_layer, hints[index]);
     current_hint = index;
@@ -164,16 +177,19 @@ void compass_heading_handler(CompassHeadingData heading_data){
     case CompassStatusCalibrating:
       hints[2] = "Fine tuning compass...";
       APP_LOG(APP_LOG_LEVEL_DEBUG, "Fine tuning compass");
-      break;
+      // continue to default
+      // break;
     case CompassStatusCalibrated:
       hints[2] = "Compass calibrated";
       APP_LOG(APP_LOG_LEVEL_DEBUG, "Compass calibrated");
+      // continue to default
+    default:
       if (strcmp(text_layer_get_text(hint_layer), "Fine tuning compass...") == 0) {
         text_layer_set_text(hint_layer, hints[0]);
       }
       // orientation = heading_data.true_heading;
-      orientation = (360 - TRIGANGLE_TO_DEG(heading_data.magnetic_heading))%360;
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "Magnetic heading: %d (deg %ld), orientation %d°",(int) heading_data.magnetic_heading, TRIGANGLE_TO_DEG(heading_data.magnetic_heading), orientation);
+      orientation = (360 - TRIGANGLE_TO_DEG(heading_data.true_heading))%360;
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Magnetic heading: %d (deg %ld), orientation %d°",(int) heading_data.true_heading, TRIGANGLE_TO_DEG(heading_data.true_heading), orientation);
       layer_mark_dirty(head_layer);
       layer_mark_dirty(info_layer);
       return;
@@ -192,6 +208,13 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
 
+  if(!bluetooth_connection_service_peek()) {
+    text_layer_set_text(track_layer, "!");
+    text_layer_set_text(speed_layer, "!");
+    text_layer_set_text(acc_layer, "!");
+    text_layer_set_text(dist_layer, "No phone connection!");
+  }
+  
   int goingto = orientation;
   static char bearing_text[6] = "~";
   if (pheading > 0) {
@@ -347,12 +370,14 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
       show_hint(3);
     }
 #endif
+    initialized = true;
   }
   static char units[9];
   static char *unit = "--";
 
   Tuple *head_tuple = dict_find(iter, HEAD_KEY);
   if (head_tuple) {
+    location_updated = time(NULL);
     hints[3] = "Target set";
     heading = head_tuple->value->int16;
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated heading to %d", heading);
@@ -506,6 +531,7 @@ static void menu_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuI
 }
 
 void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *data) {
+  text_layer_set_text(hint_layer, "Loading data...");
   Place *place = &places[cell_index->row];
   APP_LOG(APP_LOG_LEVEL_DEBUG, "SELECT pushed, getting info for history place %lu", place->id);
   send_message(set_cmd, place->id);
@@ -542,7 +568,7 @@ static void window_load(Window *window) {
   text_layer_set_text_color(dist_layer, GColorBlack);
   text_layer_set_background_color(dist_layer, GColorClear);
   text_layer_set_text_alignment(dist_layer, GTextAlignmentCenter);
-  text_layer_set_text(dist_layer, "");
+  text_layer_set_text(dist_layer, "Initializing");
   layer_add_child(window_layer, text_layer_get_layer(dist_layer));
   
   target_layer = text_layer_create(GRect(0, 32, 48, 35));
@@ -550,7 +576,7 @@ static void window_load(Window *window) {
   text_layer_set_text_color(target_layer, GColorBlack);
   text_layer_set_background_color(target_layer, GColorClear);
   text_layer_set_text_alignment(target_layer, GTextAlignmentCenter);
-  text_layer_set_text(target_layer, "");
+  text_layer_set_text(target_layer, "Please");
   layer_add_child(window_layer, text_layer_get_layer(target_layer));
   
   target2_layer = text_layer_create(GRect(bounds.size.w-48, 32, 48, 35));
@@ -558,7 +584,7 @@ static void window_load(Window *window) {
   text_layer_set_text_color(target2_layer, GColorBlack);
   text_layer_set_background_color(target2_layer, GColorClear);
   text_layer_set_text_alignment(target2_layer, GTextAlignmentCenter);
-  text_layer_set_text(target2_layer, "");
+  text_layer_set_text(target2_layer, "wait");
   layer_add_child(window_layer, text_layer_get_layer(target2_layer));
   
   hint_layer_size = GRect(0, bounds.size.h-15, bounds.size.w, 15);
@@ -658,15 +684,17 @@ static void menu_window_unload(Window *window) {
 
 
 static void init(void) {
+  initialized = false;
   hints[0] = "Loading history...";
   hints[1] = "Long SELECT to set target";
-  #ifdef PBL_COLOR
-    approaching = GColorMintGreen;
-    receding = GColorSunsetOrange;
-  #else
-    approaching = GColorWhite;
-    receding = GColorWhite;
-  #endif
+  hints[MAX_HINT_COUNT - 1] = "Loading data...";
+#ifdef PBL_COLOR
+  approaching = GColorMintGreen;
+  receding = GColorSunsetOrange;
+#else
+  approaching = GColorWhite;
+  receding = GColorWhite;
+#endif
   Place *place = &places[0];
   place->id = -1;
   strcpy(place->title, "Add new target");
