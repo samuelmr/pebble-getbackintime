@@ -188,7 +188,8 @@ void compass_heading_handler(CompassHeadingData heading_data){
         text_layer_set_text(hint_layer, hints[0]);
       }
       // orientation = heading_data.true_heading;
-      orientation = (360 - TRIGANGLE_TO_DEG(heading_data.true_heading))%360;
+      // orientation = (360 - TRIGANGLE_TO_DEG(heading_data.true_heading))%360;
+      orientation = 360 - (((int)(heading_data.magnetic_heading * 360 / TRIG_MAX_ANGLE) % 360 + 360) % 360);
       APP_LOG(APP_LOG_LEVEL_DEBUG, "Magnetic heading: %d (deg %ld), orientation %d°",(int) heading_data.true_heading, TRIGANGLE_TO_DEG(heading_data.true_heading), orientation);
       layer_mark_dirty(head_layer);
       layer_mark_dirty(info_layer);
