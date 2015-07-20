@@ -491,8 +491,8 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   Tuple *sens_tuple = dict_find(iter, SENS_KEY);
   if (sens_tuple) {
     sensitivity = sens_tuple->value->int8;
-    compass_service_set_heading_filter(TRIG_MAX_ANGLE*sensitivity/360);
     compass_service_unsubscribe();
+    compass_service_set_heading_filter(TRIG_MAX_ANGLE*sensitivity/360);
     compass_service_subscribe(&compass_heading_handler);
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Sensitivity: %d", sensitivity);
   }
