@@ -151,7 +151,7 @@ you select them from the timeline.</p>
    // console.log(JSON.stringify(obj));
    req.send(JSON.stringify(obj));
   };
-  // getPosition();
+  getPosition();
   getHistory();
   setTokens();
   
@@ -166,36 +166,38 @@ you select them from the timeline.</p>
    a.href = '/' + userToken + '/?timelineToken=' + timelineToken;
    p.appendChild(a);
    tokenDiv.appendChild(p);
-   var text = document.createTextNode('Your Pebble account token is ');
-   var tt = document.createElement('tt');
-   tt.appendChild(document.createTextNode(userToken));
-   p = document.createElement('p');
-   p.appendChild(text);
-   p.appendChild(tt);
-   p.appendChild(document.createTextNode(' '));
-   tokenDiv.appendChild(p);
-   if (timelineToken) {
-    p = document.createElement('p');
-    var text = document.createTextNode('Your Pebble timeline token is ');
+   if (userToken && (userToken != '-')) {
+    var text = document.createTextNode('Your Pebble account token is ');
     var tt = document.createElement('tt');
-    tt.appendChild(document.createTextNode(timelineToken));
+    tt.appendChild(document.createTextNode(userToken));
     p = document.createElement('p');
     p.appendChild(text);
     p.appendChild(tt);
     p.appendChild(document.createTextNode(' '));
     tokenDiv.appendChild(p);
+    if (timelineToken) {
+     p = document.createElement('p');
+     var text = document.createTextNode('Your Pebble timeline token is ');
+     var tt = document.createElement('tt');
+     tt.appendChild(document.createTextNode(timelineToken));
+     p = document.createElement('p');
+     p.appendChild(text);
+     p.appendChild(tt);
+     p.appendChild(document.createTextNode(' '));
+     tokenDiv.appendChild(p);
+    }
+    p = document.createElement('p');
+    a = document.createElement('a');
+    a.href = 'mailto:?subject=Pebble%20account%20Token&body=' +
+     'Your%20Pebble%20account%20token%20is%20' + userToken;
+    if (timelineToken) {
+     a.href += '%20and%20your%20Pebble%20timeline%20token%20is%20' + timelineToken;
+    }
+    a.appendChild(document.createTextNode('Send token' + (timelineToken ? 's' : '') + ' by mail'));
+    p.appendChild(a);
+    p.appendChild(document.createTextNode(' (or just save as draft from which you can copy and paste)'));
+    tokenDiv.appendChild(p);
    }
-   p = document.createElement('p');
-   a = document.createElement('a');
-   a.href = 'mailto:?subject=Pebble%20account%20Token&body=' +
-    'Your%20Pebble%20account%20token%20is%20' + userToken;
-   if (timelineToken) {
-    a.href += '%20and%20your%20Pebble%20timeline%20token%20is%20' + timelineToken;
-   }
-   a.appendChild(document.createTextNode('Send token' + (timelineToken ? 's' : '') + ' by mail'));
-   p.appendChild(a);
-   p.appendChild(document.createTextNode(' (or just save as draft from which you can copy and paste)'));
-   tokenDiv.appendChild(p);
    tokenDiv.style.display = 'block';
   }
 
