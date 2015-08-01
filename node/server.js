@@ -71,7 +71,7 @@ function pushPin(place, res) {
     }
     catch(e) {
       console.warn('Failed to create pin: ' + e);
-      res.status(400);
+      res.status(500);
       res.send('Failed to create pin: ' + e);
       return;
     }
@@ -113,7 +113,7 @@ function pushPin(place, res) {
   timeline.sendUserPin(place.timelineToken, pin, function (err, body, resp) {
     if(err) {
       console.warn('Failed to push pin to timeline: ' + err);
-      res.status(400);
+      res.status(500);
       res.send('Failed to push pin to timeline: ' + err);
     }
     else {
@@ -163,14 +163,14 @@ app.post('/:userToken/place/new', function(req, res) {
   MongoClient.connect(mongoUri, function(err, db) {
     if (err || !db) {
       console.warn('Failed to open db connection: ' + err);
-      res.status(400);
+      res.status(500);
       res.send('Failed to open db connection: ' + err);
       return;
     }
     db.collection('places', function(err, collection) {
       if (err || !collection) {
         console.warn('Could not find collection "places": ' + err);
-        res.status(400);
+        res.status(500);
         res.send('Could not find collection "places": ' + err);
         return;
       }
@@ -183,7 +183,7 @@ app.post('/:userToken/place/new', function(req, res) {
             collection.insert(place, {safe: true}, function(err, result) {
               if (err || !result) {
                 console.warn('Failed again to save place into db: ' + err);
-                res.status(400);
+                res.status(500);
                 res.send('Failed to save place into db: ' + err);
                 return;
               }
@@ -199,7 +199,7 @@ app.post('/:userToken/place/new', function(req, res) {
           }
           else {
             console.warn('Failed again to save place into db: ' + err);
-            res.status(400);
+            res.status(500);
             res.send('Failed to save place into db: ' + err);
             return;
           }
@@ -227,20 +227,26 @@ app.get('/:userToken/place/:id', function(req, res) {
   MongoClient.connect(mongoUri, function(err, db) {
     if (err) {
       console.warn('Failed to open db connection: ' + err);
-      res.status(400);
+      res.status(500);
       res.send('Failed to open db connection: ' + err);
       return;
     }
-    db.collection('places', function(er, collection) {
+    db.collection('places', function(err, collection) {
+      if (err || !collection) {
+        console.warn('Could not find collection "places": ' + err);
+        res.status(500);
+        res.send('Could not find collection "places": ' + err);
+        return;
+      }
       collection.findOne({"user": userToken, "_id": id}, function(err, doc) {
         if (err) {
-          res.status(400);
+          res.status(500);
           res.send('Failed to retrieve place from db: ' + err);
           return;
         }
         // console.log(doc);
         if (!doc) {
-          res.status(403);
+          res.status(404);
           res.send('No place with id ' + id + ' found for user token ' + userToken);
           return;
         }
@@ -258,16 +264,22 @@ app.get('/:userToken/places/:max?', function(req, res) {
   MongoClient.connect(mongoUri, function(err, db) {
     if (err) {
       console.warn('Failed to open db connection: ' + err);
-      res.status(400);
+      res.status(500);
       res.send('Failed to open db connection: ' + err);
       return;
     }
-    db.collection('places', function(er, collection) {
+    db.collection('places', function(err, collection) {
+      if (err || !collection) {
+        console.warn('Could not find collection "places": ' + err);
+        res.status(500);
+        res.send('Could not find collection "places": ' + err);
+        return;
+      }
       var query = {"user": userToken, "time": {$type: 1}};
       collection.find(query).sort({time: -1}).limit(max).toArray(function(err, places) {
         if (err) {
           console.warn('Failed to retrieve places from db: ' + err);
-          res.status(400);
+          res.status(500);
           res.send('Failed to retrieve places from db: ' + err);
           return;
         }
@@ -277,6 +289,44 @@ app.get('/:userToken/places/:max?', function(req, res) {
       });
     });
   });  
+});
+
+// delete a certain point
+app.delete('/:userToken/place/:id', function(req, res) {
+  var userToken = req.params.userToken;
+  var id = parseInt(req.params.id);
+  // console.log('Trying to connect to mongodb at ' + mongoUri);
+  MongoClient.connect(mongoUri, function(err, db) {
+    if (err) {
+      console.warn('Failed to open db connection: ' + err);
+      res.status(500);
+      res.send('Failed to open db connection: ' + err);
+      return;
+    }
+    db.collection('places', function(err, collection) {
+      if (err || !collection) {
+        console.warn('Could not find collection "places": ' + err);
+        res.status(500);
+        res.send('Could not find collection "places": ' + err);
+        return;
+      }
+      collection.remove({"user": userToken, "_id": id}, {"w": 1, "single": true}, function(err, num) {
+        if (err) {
+          res.status(500);
+          res.send('Failed to remove place from db: ' + err);
+          return;
+        }
+        // console.log(num);
+        if (!num) {
+          res.status(404);
+          res.send('No place with id ' + id + ' found for user token ' + userToken);
+          return;
+        }
+        var result = {'status': 'OK', 'deleted_id': id, 'message': 'Place ' + id + ' deleted'};
+        res.json(result);
+      });
+    });
+  });
 });
 
 // show configuration page
@@ -291,7 +341,7 @@ app.get('/:userToken/configure', function(req, res) {
   res.render('configure', context);
 });
 
-app.get('/:userToken?/', function (req, res) {
+app.get('/:userToken?', function (req, res) {
   var context = {'userToken': req.params.userToken,
                  'timelineToken': req.query.timelineToken};
   res.render('home', context);
