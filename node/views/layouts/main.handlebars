@@ -8,6 +8,7 @@
 <meta content="width" name="MobileOptimized">
 <meta content="width=device-width,initial-scale=1" name="viewport">
 <link href="http://fonts.googleapis.com/css?family=Fira+Sans:400,700,400italic" rel='stylesheet' type='text/css'>
+<link rel="shortcut icon" href="/favicon.ico" />
 <style type="text/css">
  body {
   font-family: 'Fira Sans',Helvetica,Arial,sans-serif;
@@ -71,7 +72,7 @@
  legend {
   font-weight: 700;
  }
- form p {
+ #configform p {
   margin: 0;
   font-size: 80%;
   font-style: italic;
@@ -95,6 +96,40 @@
   text-decoration: underline;
  }
  /* config form done */
+ 
+ table {
+  border-collapse: collapse;
+  width: 100%;
+ }
+ td, th {
+  padding: 0 0.5em;
+  margin: 0;
+  white-space: nowrap;
+ }
+ th.name {
+  text-align: left;
+ }
+ td.time {
+  text-align: right;
+ }
+ td.coords, td.opts {
+  text-align: center;
+ }
+ td button {
+  margin: 0 0 0 0.5em;
+ }
+ #support form {
+  border-color: #999;
+  border-style: dashed;
+  border-width: 0 0 1px 0;
+  margin: 1em 0 0 0;
+  padding: 0 0 0.5em 0;
+  text-align: center;
+ }
+ #support form p {
+  text-align: left;
+  line-height: 2;
+ }
 </style>
 </head>
 <body>
