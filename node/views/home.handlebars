@@ -182,12 +182,54 @@ function success(position) {
 window.navigator.geolocation.getCurrentPosition(success);
 </code>
 <h3>API usage restrictions</h3>
-<p>The API currently runs on a free <a href="https://www.heroku.com/">Heroku</a>
+<p>The API currently runs on a low cost <a href="https://www.heroku.com/">Heroku</a>
 instance and has "best effort" service level. Please test your implementations on your
 own environment in order to minimize the load to the API server. If you want better
 service level or if you plan to automatically push more than a dozen locations per day
 to your timeline, consider implementing your own API server. You can start by cloning
 <a href="https://github.com/samuelmr/pebble-getbackintime">the code on Github</a>.</p>
+</div>
+<div id="support">
+<h2>Donate</h2>
+<p>The Get Back in Time app is provided free of charge. I get no compensation for the
+development of the app. In addition, I'm paying 
+<a href="https://www.heroku.com/pricing">Heroku</a> $84 per year to keep the server
+running 24/7.</p>
+<p>If you like the functionality of the app and would like to show your support and
+contribute to the server costs, you have three choices:</p>
+<form action="https://www.paypal.com/cgi-bin/webscr" method="post" id="subscription">
+<h3>Subsrcibe for $1 per year</h3>
+<p>Contribute one dollar. This is a yearly subscription. You can cancel any time
+you like - and still continue to use the service for free! The payment is strictly
+voluntary.</p>
+<p> If 84 users pay $1 each year, the current server costs are covered. All additional
+funds are used for additional capacity to the server platform - e.g. faster response times
+and more data storage.</p>
+<input type="hidden" name="cmd" value="_s-xclick" />
+<input type="hidden" name="hosted_button_id" value="EM26GTEZQKLQY" />
+<input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_subscribeCC_LG.gif" border="0" name="submit" alt="Subscribe" class="support" />
+</form>
+<form action="https://www.paypal.com/cgi-bin/webscr" method="post" id="support-platform">
+<h3>Donate any amount</h3>
+<p>Don't want to pay a recurring fee? $1 is too much or not enough? Pick any amount you
+like. All funds are used for additional capacity to the server platform - e.g. faster
+response times and more data storage.</p>
+<input type="hidden" name="cmd" value="_s-xclick" />
+<input type="hidden" name="hosted_button_id" value="DTRWH4T2N2XLE" />
+<input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_paynowCC_LG.gif" border="0" name="submit" alt="Pay now" />
+</form>
+</form>
+<div id="support-development">
+<h3>Support the developer</h3>
+<p>If you like the app (or any of my other Pebble apps) and would like to encourage me
+to maintain them and create new apps, you can send a small contribution to my personal
+Paypal account samuel@iki.fi (choose the option <em>I'm sending money to family or
+friends</em>).</p>
+<p>I will use the money for personal recreation, take my wife out for a dinner, support
+cool projects on Kickstarter or something similar. But most importantly, your kindness
+will fill my heart with joy and increase my enthusiasm to create useful and fun apps
+for the great Pebble user community.</p>
+</div>
 </div>
 <script>
   var loc = window.location;
