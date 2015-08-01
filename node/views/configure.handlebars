@@ -225,34 +225,74 @@ you select them from the timeline.</p>
       var h2 = document.createElement('h2');
       h2.appendChild(document.createTextNode('Location history'));
       div.appendChild(h2);
-      var ul = document.createElement('ul');
+      var t = document.createElement('table');
+      var tr = document.createElement('tr');
+      var th = document.createElement('th');
+      th.appendChild(document.createTextNode('Time'));
+      tr.appendChild(th);
+      th = document.createElement('th');
+      th.className = 'name';
+      th.appendChild(document.createTextNode('Name'));
+      tr.appendChild(th);
+      th = document.createElement('th');
+      th.appendChild(document.createTextNode('Coordinates'));
+      tr.appendChild(th);
+      th = document.createElement('th');
+      th.appendChild(document.createTextNode('Options'));
+      tr.appendChild(th);
+      t.appendChild(tr);
       for (var i=0; i<places.length; i++) {
        if (!places[i]) {
         continue;
        }
-       var li = document.createElement('li');
-       if (places[i].time && Date.parse(places[i].time)) {
+       tr = document.createElement('tr');
+       var td = document.createElement('td');
+       td.className = 'time';
+       if (places[i].time) {
         var d = new Date(places[i].time);
         var dStr = (d.getMonth()+1) + '/' + 
                    d.getDate() + ' ' + 
                    d.getHours() + ':' + 
                    d.getMinutes() + ' ';
-        li.appendChild(document.createTextNode(dStr));
+        td.appendChild(document.createTextNode(dStr));
        }
+       else {
+        console.log(places[i].time);
+       }
+       tr.appendChild(td);
+       td = document.createElement('td');
+       td.className = 'name';
        if (places[i].pin && places[i].pin.layout && places[i].pin.layout.title) {
-        li.appendChild(document.createTextNode(places[i].pin.layout.title));
+        td.appendChild(document.createTextNode(places[i].pin.layout.title));
        }
+       tr.appendChild(td);
+       td = document.createElement('td');
+       td.className = 'coords';
        if (places[i].position && places[i].position.coords) {
-        var latlon = places[i].position.coords.latitude + ', ' + 
-                     places[i].position.coords.longitude;
-        li.appendChild(document.createTextNode(' (' + latlon + ')'));
+        var latlon = Math.round(places[i].position.coords.latitude*10000)/10000 + ', ' +
+                     Math.round(places[i].position.coords.longitude*10000)/10000;
+        td.appendChild(document.createTextNode(latlon));
        }
-       li.setAttribute('data-position', latlon);
-       li.onclick = sendMe;
-       ul.appendChild(li);
+       tr.appendChild(td);
+       td = document.createElement('td');
+       td.className = 'opts';
+       var b = document.createElement('button');
+       b.appendChild(document.createTextNode('Get Back'));
+       b.setAttribute('data-position', latlon);
+       b.onclick = sendMe;
+       td.appendChild(b);
+       b = document.createElement('button');
+       b.appendChild(document.createTextNode('Delete'));
+       b.setAttribute('data-id', places[i]._id);
+       b.onclick = deleteMe;
+       td.appendChild(b);
+       
+       tr.appendChild(td);
+       t.appendChild(tr);
       }
-      div.appendChild(ul);
-      tokenDiv.parentNode.appendChild(div);
+      div.appendChild(t);
+      tokenDiv.appendChild(div);
+      // tokenDiv.parentNode.insertBefore(div, tokenDiv.parentNode.lastChild);
      }
     }
    };
@@ -264,6 +304,26 @@ you select them from the timeline.</p>
   chosenPos = this.getAttribute('data-position');
   var e = {preventDefault: function() {}};
   sendConfig(e);
+ }
+ function deleteMe() {
+  id = this.getAttribute('data-id');
+  var req = new XMLHttpRequest();
+  req.open('DELETE', '/' + userToken + '/place/' + id);
+  req.onload = function() {
+   if ((this.status == 200) && (this.responseText.substr(0, 1) == '{')) {
+    var result = JSON.parse(this.responseText);
+    console.log(result);
+    var id = result.deleted_id;
+    var trs = document.getElementsByTagName('tr');
+    for (var i=0; i<trs.length; i++) {
+     var db = trs[i].getElementsByTagName('button')[1];
+     if (db && (db.getAttribute('data-id') == id)) {
+       trs[i].parentNode.removeChild(trs[i]);
+     }
+    }
+   }     
+  }
+  req.send();
  }
  function sendConfig(e) {
   e.preventDefault();
