@@ -28,15 +28,15 @@
 </fieldset>
 <input type="submit" value="Save configuration" />
 </form>
-<div id="troubleshooting">
-<h2>Troubleshooting</h2>
-<p>Everything not working as expected? See <a href="/{{userToken}}/?timelineToken={{conf.timelineToken}}#troubleshooting">troubleshooting</a>.</p>
+<div id="support">
+<h2>Support</h2>
+<ul>
+<li>Everything not working as expected? See <a href="/{{userToken}}/?timelineToken={{conf.timelineToken}}#troubleshooting">troubleshooting</a>.</li>
+<li>Like the app? Consider <a href="/{{userToken}}/?timelineToken={{conf.timelineToken}}#support">a small donation to the developer</a>.</li>
+</ul>
 </div>
 <form method="post" action="place/new" id="add">
 <h2>Add new place manually</h2>
-<p>When you set a target using your Pebble (long press any button on the right),
-the coordinates are converted to place names using
-<a href="http://www.gisgraphy.com/">Gisgraphy</a>.</p>
 <fieldset>
 <p>Here you can set a target by entering name and coordinates manually. The targets are 
 pushed to your timeline (to current time). They won't replace your current target until
@@ -52,7 +52,6 @@ you select them from the timeline.</p>
 </fieldset>
 </form>
 <div id="tok"></div>
-<div>Icon made by <a href="http://www.danielbruce.se/" title="Daniel Bruce">Daniel Bruce</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a> is licensed under <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0">CC BY 3.0</a></div>
 <script>
  var chosenPos;
  var f = document.getElementById('configform');
@@ -63,6 +62,7 @@ you select them from the timeline.</p>
  var fa = document.getElementById('fast');
  var no = document.getElementById('normal');
  var sl = document.getElementById('slow');
+ var months = ['Jan', 'Feb', 'Mar', 'Apr', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
  var conf;
  var userToken = '{{userToken}}';
  var timelineToken;
@@ -131,6 +131,15 @@ you select them from the timeline.</p>
     var msg = 'Error pushing to database!';
     if ((this.status == 200) && (this.responseText.substr(0, 1) == '{')) {
      var obj = JSON.parse(this.responseText);
+     var t = document.getElementById('locationhistory');
+     if (t) {
+      if (t.hasChildNodes() && t.childNodes[1]) {
+       t.insertBefore(place2tr(obj), t.childNodes[1]);
+      }
+      else {
+       t.appendChild(place2tr(obj));
+      }
+     }
      if (obj.pin && obj.pin.layout && obj.pin.layout.title) {
       div.className = 'result ok';
       msg = 'Added place ' + obj.pin.layout.title + ' to database!';
@@ -226,6 +235,7 @@ you select them from the timeline.</p>
       h2.appendChild(document.createTextNode('Location history'));
       div.appendChild(h2);
       var t = document.createElement('table');
+      t.id = 'locationhistory';
       var tr = document.createElement('tr');
       var th = document.createElement('th');
       th.appendChild(document.createTextNode('Time'));
@@ -236,6 +246,7 @@ you select them from the timeline.</p>
       tr.appendChild(th);
       th = document.createElement('th');
       th.appendChild(document.createTextNode('Coordinates'));
+      th.className = 'coords';
       tr.appendChild(th);
       th = document.createElement('th');
       th.appendChild(document.createTextNode('Options'));
@@ -245,50 +256,7 @@ you select them from the timeline.</p>
        if (!places[i]) {
         continue;
        }
-       tr = document.createElement('tr');
-       var td = document.createElement('td');
-       td.className = 'time';
-       if (places[i].time) {
-        var d = new Date(places[i].time);
-        var dStr = (d.getMonth()+1) + '/' + 
-                   d.getDate() + ' ' + 
-                   d.getHours() + ':' + 
-                   d.getMinutes() + ' ';
-        td.appendChild(document.createTextNode(dStr));
-       }
-       else {
-        console.log(places[i].time);
-       }
-       tr.appendChild(td);
-       td = document.createElement('td');
-       td.className = 'name';
-       if (places[i].pin && places[i].pin.layout && places[i].pin.layout.title) {
-        td.appendChild(document.createTextNode(places[i].pin.layout.title));
-       }
-       tr.appendChild(td);
-       td = document.createElement('td');
-       td.className = 'coords';
-       if (places[i].position && places[i].position.coords) {
-        var latlon = Math.round(places[i].position.coords.latitude*10000)/10000 + ', ' +
-                     Math.round(places[i].position.coords.longitude*10000)/10000;
-        td.appendChild(document.createTextNode(latlon));
-       }
-       tr.appendChild(td);
-       td = document.createElement('td');
-       td.className = 'opts';
-       var b = document.createElement('button');
-       b.appendChild(document.createTextNode('Get Back'));
-       b.setAttribute('data-position', latlon);
-       b.onclick = sendMe;
-       td.appendChild(b);
-       b = document.createElement('button');
-       b.appendChild(document.createTextNode('Delete'));
-       b.setAttribute('data-id', places[i]._id);
-       b.onclick = deleteMe;
-       td.appendChild(b);
-       
-       tr.appendChild(td);
-       t.appendChild(tr);
+       t.appendChild(place2tr(places[i]));
       }
       div.appendChild(t);
       tokenDiv.appendChild(div);
@@ -299,6 +267,49 @@ you select them from the timeline.</p>
    req.open('GET', '/' + userToken + '/places/20');
    req.send();
   }
+ }
+ function place2tr(place) {
+  var tr = document.createElement('tr');
+  var td = document.createElement('td');
+  td.className = 'time';
+  if (place.time) {
+   var d = new Date(place.time);
+   var dStr = months[d.getMonth()] + ' ' + 
+              d.getDate() + ' ' + 
+              d.getHours() + ':' + 
+              (d.getMinutes() < 10 ? '0' : '') + 
+              d.getMinutes() + ' ';
+   td.appendChild(document.createTextNode(dStr));
+  }
+  tr.appendChild(td);
+  td = document.createElement('td');
+  td.className = 'name';
+  if (place.pin && place.pin.layout && place.pin.layout.title) {
+   td.appendChild(document.createTextNode(place.pin.layout.title));
+  }
+  tr.appendChild(td);
+  td = document.createElement('td');
+  td.className = 'coords';
+  if (place.position && place.position.coords) {
+   var latlon = Math.round(place.position.coords.latitude*10000)/10000 + ', ' +
+                Math.round(place.position.coords.longitude*10000)/10000;
+   td.appendChild(document.createTextNode(latlon));
+  }
+  tr.appendChild(td);
+  td = document.createElement('td');
+  td.className = 'opts';
+  var b = document.createElement('button');
+  b.appendChild(document.createTextNode('Get Back'));
+  b.setAttribute('data-position', latlon);
+  b.onclick = sendMe;
+  td.appendChild(b);
+  b = document.createElement('button');
+  b.appendChild(document.createTextNode('Delete'));
+  b.setAttribute('data-id', place._id);
+  b.onclick = deleteMe;
+  td.appendChild(b);
+  tr.appendChild(td);
+  return tr;
  }
  function sendMe() {
   chosenPos = this.getAttribute('data-position');

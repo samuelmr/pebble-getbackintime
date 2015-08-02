@@ -14,9 +14,17 @@
   font-family: 'Fira Sans',Helvetica,Arial,sans-serif;
  }
  h1 {
-  font-size: 4.5em;
+  background-image: url('/logo.png');
+  background-repeat: no-repeat;
+  background-position: left center;
+  font-size: 48px;
+  margin: 0 auto;
+  max-width: 485px;
+  min-height: 64px;
+  padding-left: 75px;
+  text-align: left;
  }
- h1, p, div, h2, h3, code, form {
+ p, div, h2, h3, code, form {
   line-height: 2;
   margin: 0 auto;
   max-width: 560px;
@@ -88,29 +96,38 @@
  #configform label.short {
   width: 6em;
  }
+ #support li, #support ul {
+  padding: 0;
+  margin: 0;
+ }
+ #support li {
+  list-style-type: none;
+ }
  input {
  }
- .history li {
-  color: blue;
-  cursor: pointer;
-  text-decoration: underline;
- }
  /* config form done */
- 
+ .history {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+ } 
  table {
   border-collapse: collapse;
+  margin: 0;
   width: 100%;
  }
  td, th {
-  padding: 0 0.5em;
+  border: 1px solid #CCC;
+  line-height: 1.5;
   margin: 0;
+  padding: 0 0.25em;
   white-space: nowrap;
  }
  th.name {
   text-align: left;
  }
- td.time {
-  text-align: right;
+ td {
+  font-size: smaller;
  }
  td.coords, td.opts {
   text-align: center;
@@ -129,6 +146,14 @@
  #support form p {
   text-align: left;
   line-height: 2;
+ }
+ @media screen and (max-width: 40em) {
+  h1 {
+   font-size: 2em;
+  }
+  th.coords, td.coords {
+   display: none;
+  }
  }
 </style>
 </head>
