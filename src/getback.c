@@ -15,6 +15,7 @@ static TextLayer *speed_layer;
 static TextLayer *speed_label_layer;
 static TextLayer *acc_layer;
 static TextLayer *acc_label_layer;
+static TextLayer *calib_hint_layer;
 static Layer *head_layer;
 static Layer *info_layer;
 static char *hints[MAX_HINT_COUNT];
@@ -57,8 +58,15 @@ static MenuLayer *menu_layer;
 
 static GColor approaching;
 static GColor receding;
-static GColor bg;
+// static GColor bg;
 static int max_radius;
+
+enum compass_states {
+  CALIBRATING = 0,
+  FINETUNING = 1,
+  CALIBRATED = 2
+};
+static int compass_state = CALIBRATING;
 
 static void click_config_provider(void *context);
 
@@ -171,17 +179,26 @@ static void next_hint_handler(ClickRecognizerRef recognizer, void *context) {
 void compass_heading_handler(CompassHeadingData heading_data){
   switch (heading_data.compass_status) {
     case CompassStatusDataInvalid:
+      compass_state = CALIBRATING;
       hints[2] = "Calibrating compass...";
       APP_LOG(APP_LOG_LEVEL_DEBUG, "Calibrating compass");
+      layer_set_hidden(head_layer, true);
+      layer_set_hidden(text_layer_get_layer(calib_hint_layer), false);
       break;
     case CompassStatusCalibrating:
+      compass_state = FINETUNING;
       hints[2] = "Fine tuning compass...";
       APP_LOG(APP_LOG_LEVEL_DEBUG, "Fine tuning compass");
+      layer_set_hidden(head_layer, true);
+      layer_set_hidden(text_layer_get_layer(calib_hint_layer), false);
       // continue to default
-      // break;
+      break;
     case CompassStatusCalibrated:
+      compass_state = CALIBRATED;
       hints[2] = "Compass calibrated";
       APP_LOG(APP_LOG_LEVEL_DEBUG, "Compass calibrated");
+      layer_set_hidden(head_layer, false);
+      layer_set_hidden(text_layer_get_layer(calib_hint_layer), true);
       // continue to default
     default:
       if (strcmp(text_layer_get_text(hint_layer), "Fine tuning compass...") == 0) {
@@ -196,12 +213,15 @@ void compass_heading_handler(CompassHeadingData heading_data){
       return;
   }
   show_hint(2);
+
+/* this might be too confusing... perhaps make it optional some day?
   if (pheading >= 0) {
     orientation = pheading%360;
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Orientation from phone heading: %d° (%d)", orientation, pheading);
   }
   layer_mark_dirty(head_layer);
   layer_mark_dirty(info_layer);
+*/
 }
 
 static void info_layer_update_callback(Layer *layer, GContext *ctx) {
@@ -215,7 +235,7 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
     text_layer_set_text(acc_layer, "!");
     text_layer_set_text(dist_layer, "No phone connection!");
   }
-  
+
   int goingto = orientation;
   static char bearing_text[6] = "~";
   if (pheading > 0) {
@@ -271,6 +291,18 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
     }
     graphics_fill_circle(ctx, needle_axis, radius);
   }
+  else if (compass_state != CALIBRATED) {
+    layer_set_hidden(text_layer_get_layer(target_layer), true);
+    layer_set_hidden(text_layer_get_layer(target2_layer), true);
+    int radius = distance * 2;
+    if (radius > max_radius) {
+      radius = max_radius;
+    }
+    if (radius < 5) {
+      radius = 5;
+    }
+    graphics_fill_circle(ctx, needle_axis, radius);
+  }
   else {
     layer_set_hidden(text_layer_get_layer(target_layer), false);
     layer_set_hidden(text_layer_get_layer(target2_layer), false);
@@ -279,7 +311,7 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
     gpath_rotate_to(head_path, compass_heading);
     gpath_draw_filled(ctx, head_path);
   }
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Orientation %d, heading %d, phone heading %d, compass heading %d", orientation, heading, pheading, (heading - orientation));
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance: %d, orientation %d, heading %d, phone heading %d, compass heading %d", (int) distance, orientation, heading, pheading, (heading - orientation));
 }
 
 static void send_message(const char *cmd, int32_t id) {
@@ -469,6 +501,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
       reset_dist_bg(NULL);
     }
     distance = dist_tuple->value->int32;
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated distance to %d", (int) distance);
   }
   int32_t show_dist = distance;
   if (strcmp(units, "imperial") == 0) {
@@ -563,7 +596,7 @@ static void window_load(Window *window) {
   gpath_move_to(head_path, needle_axis);
   layer_add_child(window_layer, head_layer);
   max_radius = (bounds.size.h - 81)/2;
-  
+
   dist_layer = text_layer_create(GRect(0, bounds.size.h-49, bounds.size.w, 35));
   text_layer_set_font(dist_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_color(dist_layer, GColorBlack);
@@ -571,7 +604,7 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(dist_layer, GTextAlignmentCenter);
   text_layer_set_text(dist_layer, "Initializing");
   layer_add_child(window_layer, text_layer_get_layer(dist_layer));
-  
+
   target_layer = text_layer_create(GRect(0, 32, 48, 35));
   text_layer_set_font(target_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_color(target_layer, GColorBlack);
@@ -579,7 +612,7 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(target_layer, GTextAlignmentCenter);
   text_layer_set_text(target_layer, "Please");
   layer_add_child(window_layer, text_layer_get_layer(target_layer));
-  
+
   target2_layer = text_layer_create(GRect(bounds.size.w-48, 32, 48, 35));
   text_layer_set_font(target2_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_color(target2_layer, GColorBlack);
@@ -587,7 +620,7 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(target2_layer, GTextAlignmentCenter);
   text_layer_set_text(target2_layer, "wait");
   layer_add_child(window_layer, text_layer_get_layer(target2_layer));
-  
+
   hint_layer_size = GRect(0, bounds.size.h-15, bounds.size.w, 15);
   hint_layer = text_layer_create(hint_layer_size);
   text_layer_set_font(hint_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
@@ -628,7 +661,7 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(speed_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(speed_layer));
   text_layer_set_text(speed_layer, "~");
-  
+
   acc_label_layer = text_layer_create(GRect(96, 0, 42, 18));
   text_layer_set_font(acc_label_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_text_color(acc_label_layer, GColorWhite);
@@ -645,6 +678,14 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(acc_layer));
   text_layer_set_text(acc_layer, "~");
 
+  calib_hint_layer = text_layer_create(GRect(8, 40, bounds.size.w-16, 70));
+  text_layer_set_font(calib_hint_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
+  text_layer_set_text_color(calib_hint_layer, GColorWhite);
+  text_layer_set_background_color(calib_hint_layer, GColorBlack);
+  text_layer_set_text_alignment(calib_hint_layer, GTextAlignmentCenter);
+  layer_set_hidden(text_layer_get_layer(calib_hint_layer), true);
+  layer_add_child(window_layer, text_layer_get_layer(calib_hint_layer));
+  text_layer_set_text(calib_hint_layer, "Calibrating compass. Draw 8 with your wrist.");
 }
 
 static void window_unload(Window *window) {
@@ -658,6 +699,7 @@ static void window_unload(Window *window) {
   text_layer_destroy(speed_label_layer);
   text_layer_destroy(acc_layer);
   text_layer_destroy(acc_label_layer);
+  text_layer_destroy(calib_hint_layer);
   if (hint_layer) {
     text_layer_destroy(hint_layer);
   }
