@@ -1,5 +1,6 @@
 var MAX_PLACES = 20; // history length
 var MAX_ERRORS = 5;
+var TTL = 500; // time to live for app messages in milliseconds
 var initialized = false;
 var lat1 = 0;
 var lon1 = 0;
@@ -27,7 +28,7 @@ var serverAddress = 'http://getback.timelinepush.com/';
 var geocoder = 'http://services.gisgraphy.com/street/search?format=json&from=0&to=1';
 var messageQueue = [];
 var errorCount = 0;
-var processing = false;
+var processing = 0;
 var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 Pebble.addEventListener("ready", function(e) {
@@ -47,7 +48,7 @@ Pebble.addEventListener("ready", function(e) {
         console.log('Got timeline token ' + timelineToken);
         localStorage.setItem("timelineToken", timelineToken);
       },
-      function (error) { 
+      function (error) {
         console.log('Error getting timeline token: ' + error);
       }
     );
@@ -142,32 +143,41 @@ Pebble.addEventListener("webviewclosed",
     console.log('is: ' + lat2 + ', ' + lon2 + ')');
     calculate();
     startWatcher();
-    getHistoryFromServer();  
+    getHistoryFromServer();
   }
 );
 
 function sendNextMessage() {
-  if (processing) {
-    console.log('Currently processing an earlier message, waiting for it to finish... (' + messageQueue.length + ' messages waiting!)');
+  var now = new Date().getTime();
+  var processed_time = now - processing;
+  if (processing && (processed_time > TTL)) {
+    console.warn('Message was processed more than ' + TTL + ' milliseconds (' + processed_time + '). Aborting.')
+    messageQueue.shift();
+    processing = 0;
+  }
+  else if (processing) {
+    console.log('Waiting for an earlier message, ' + processed_time + ' ms passed... (' + messageQueue.length + ' messages waiting!)');
+    setTimeout(sendNextMessage, TTL-processed_time+20);
     return;
   }
-  if (messageQueue.length > 0) {
+  if ((messageQueue.length > 0) && messageQueue[0]) {
     console.log('Sending message 1/' + messageQueue.length);
     Pebble.sendAppMessage(messageQueue[0], appMessageAck, appMessageNack);
     console.log("Sent message to Pebble! " + messageQueue.length + ': ' + JSON.stringify(messageQueue[0]));
-    processing = true;
+    processing = now;
   }
 }
 
 function appMessageAck(e) {
-  processing = false;
+  processing = 0;
+  errorCount = 0;
   messageQueue.shift();
   console.log('Message accepted by Pebble! (' + messageQueue.length + ' messages waiting!)');
   sendNextMessage();
 }
 
 function appMessageNack(e) {
-  processing = false;
+  processing = 0;
   if (e && e.data && e.data.transactionId) {
     console.log("Rejected message id: " + e.data.transactionId);
   }
@@ -178,7 +188,7 @@ function appMessageNack(e) {
     errorCount++;
     console.log("Retrying, " + errorCount);
   }
-  console.warn('Message rejected by Pebble! ' + e.data.error + ' (' + messageQueue.length + ' messages waiting!)');
+  console.warn('Message rejected by Pebble! ' + e.error + ' (' + messageQueue.length + ' messages waiting!)');
   sendNextMessage();
 }
 
@@ -261,7 +271,7 @@ function addLocation(position) {
           console.warn("Error sending place to server: " + json);
           return;
         }
-        var obj = JSON.parse(json); 
+        var obj = JSON.parse(json);
         console.log("Sent place to server: " + obj._id);
         getHistoryFromServer();
       };
@@ -299,8 +309,8 @@ function calculate() {
     var l1 = toRad(lat1);
     var l2 = toRad(lat2);
     var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(l1) * Math.cos(l2); 
-    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+            Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(l1) * Math.cos(l2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     dist = Math.round(R * c);
     var y = Math.sin(dLon) * Math.cos(l2);
     var x = Math.cos(l1)*Math.sin(l2) -
@@ -351,7 +361,7 @@ function getPositionFromServer(id) {
   var req = new XMLHttpRequest();
   req.onload = parseServerResponse;
   req.open("get", url, true);
-  req.send();  
+  req.send();
 }
 
 function parseServerResponse() {
@@ -436,7 +446,7 @@ function parseHistory() {
   sendNextMessage();
 }
 
-function startWatcher() {  
+function startWatcher() {
   if (locationInterval) {
     clearInterval(locationInterval);
   }
@@ -449,12 +459,12 @@ function startWatcher() {
     locationInterval = setInterval(function() {
       console.log('Interval of ' + interval + ' seconds passed');
       navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
-    }, interval * 1000);      
+    }, interval * 1000);
   }
   else {
     console.log('Interval not set, using watchPosition');
     navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
-    locationWatcher = navigator.geolocation.watchPosition(locationSuccess, locationError, locationOptions);  
+    locationWatcher = navigator.geolocation.watchPosition(locationSuccess, locationError, locationOptions);
     console.log("Started location watcher: " + locationWatcher);
   }
   // for testing: randomize movement!
@@ -475,7 +485,7 @@ function startWatcher() {
   */
 }
 function toRad(num) {
-  return num * Math.PI / 180;  
+  return num * Math.PI / 180;
 }
 function toDeg(num) {
   return num * 180 / Math.PI;
