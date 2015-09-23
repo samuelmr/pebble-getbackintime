@@ -5,9 +5,9 @@ var MongoClient = require('mongodb').MongoClient;
 var exphbs  = require('express-handlebars');
 var cors = require('cors');
 
-var mongoUri = process.env.MONGOLAB_URI || 
-  process.env.MONGOHQ_URL || 
-  'mongodb://localhost/mydb'; 
+var mongoUri = process.env.MONGOLAB_URI ||
+  process.env.MONGOHQ_URL ||
+  'mongodb://localhost/mydb';
 
 // create a new Timeline object with our API key passed as an environment variable
 var timeline = new Timeline();
@@ -157,7 +157,7 @@ app.post('/:userToken/place/new', function(req, res) {
     }
   }
   // console.log(place);
-  
+
   // store place to db
   // console.log('Trying to connect to mongodb at ' + mongoUri);
   MongoClient.connect(mongoUri, function(err, db) {
@@ -172,6 +172,7 @@ app.post('/:userToken/place/new', function(req, res) {
         console.warn('Could not find collection "places": ' + err);
         res.status(500);
         res.send('Could not find collection "places": ' + err);
+        place = null;
         return;
       }
       collection.insert(place, {safe: true}, function(err, result) {
@@ -185,6 +186,8 @@ app.post('/:userToken/place/new', function(req, res) {
                 console.warn('Failed again to save place into db: ' + err);
                 res.status(500);
                 res.send('Failed to save place into db: ' + err);
+                place = null;
+                result = null;
                 return;
               }
               console.log('Place saved to db! id = ' + place._id);
@@ -195,12 +198,15 @@ app.post('/:userToken/place/new', function(req, res) {
                 console.log('No timeline token in place. ' + JSON.stringify(place));
                 res.json(place);
               }
+              place = null;
+              result = null;
             });
           }
           else {
             console.warn('Failed again to save place into db: ' + err);
             res.status(500);
             res.send('Failed to save place into db: ' + err);
+            place = null;
             return;
           }
         }
@@ -213,6 +219,8 @@ app.post('/:userToken/place/new', function(req, res) {
             console.log('No timeline token in place. ' + JSON.stringify(place));
             res.json(place);
           }
+          place = null;
+          result = null;
         }
       });
     });
@@ -248,9 +256,12 @@ app.get('/:userToken/place/:id', function(req, res) {
         if (!doc) {
           res.status(404);
           res.send('No place with id ' + id + ' found for user token ' + userToken);
+          collection = null;
+          db = null;
           return;
         }
         res.json(doc);
+        doc = null;
       });
     });
   });
@@ -286,9 +297,10 @@ app.get('/:userToken/places/:max?', function(req, res) {
         if (places) {
           res.json(places);
         }
+        places = null;
       });
     });
-  });  
+  });
 });
 
 // delete a certain point
@@ -324,6 +336,7 @@ app.delete('/:userToken/place/:id', function(req, res) {
         }
         var result = {'status': 'OK', 'deleted_id': id, 'message': 'Place ' + id + ' deleted'};
         res.json(result);
+        num = null;
       });
     });
   });

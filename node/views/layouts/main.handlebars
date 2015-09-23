@@ -25,6 +25,9 @@
   padding: 16px 0 0 75px;
   text-align: left;
  }
+ a img {
+   border-width: 0;
+ }
  p, div, h2, h3, code, form {
   line-height: 2;
   margin: 0 auto;
@@ -97,6 +100,21 @@
  #configform label.short {
   width: 6em;
  }
+ #troubleshooting li {
+   color: blue;
+   cursor: pointer;
+   text-decoration: underline;
+ }
+ #troubleshooting li ul {
+   overflow: hidden;
+ }
+ #troubleshooting li li {
+   clear: both;
+   color: #000;
+   cursor: default;
+   float: left;
+   text-decoration: none;
+ }
  #support li, #support ul {
   padding: 0;
   margin: 0;
@@ -111,7 +129,7 @@
   margin: 0;
   padding: 0;
   width: 100%;
- } 
+ }
  table {
   border-collapse: collapse;
   margin: 0;

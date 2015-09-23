@@ -12,7 +12,7 @@ Pebble and your target is stored.</p>
 <p>The app allows you to store any amount of locations, which are pushed into your
 personal Pebble Timeline. You can browse your Timeline to find a location you wish
 to return to. A menu of 20 most recent locations are also available in your watch.</p>
-<p>Your Pebble will show you the heading and distance to your target. It uses the 
+<p>Your Pebble will show you the heading and distance to your target. It uses the
 compass to show you which way to go and colors to indicate whether you're approaching
 your target or moving away from it. The target is stored so that you can use other
 Pebble apps in the mean time and when you return to Get Back in Time you will see
@@ -27,6 +27,7 @@ up-to-date heading and distance to your target.</p>
   <ul>
    <li>The distance is calculated based on the location of your phone.</li>
    <li>If your phone can't get a good GPS signal, your position can't be determined. This may often happen if you are indoors, especially in basements or tunnels where there is no clear visibility to the sky (and the GPS satellites).</li>
+   <li>The compass works best if you keep your watch steady and leveled horizontally.</li>
    <li>The accuracy of your location (labeled gps acc.) is shown in the top right hand corner.</li>
    <li>It may take a while to calibrate the compass.</li>
    <li>Magnetic sources interfere with the compass and the compass calibration.</li>
@@ -34,12 +35,13 @@ up-to-date heading and distance to your target.</p>
  </li>
  <li>The arrow jumps or points to incorrect direction
   <ul>
-   <li>The compass in your Pebble may be calibrated poorly. If you slowly turn around a full circle and the arrow doesn't point to a single location, you have to recalibrate the compass. You have to reset your Pebble by holding the BACK and SELECT buttons down for about 10 seconds. When the compass is recalibrating, stay away from magnetic sources.</li>
+   <li>If you keep your watch in a horizontal or tilted position, the arrow will be jumpy. Try to keep your watch leveled horizontally.</li>
+   <li>The compass in your Pebble may be calibrated poorly. If you slowly turn around a full circle and the arrow doesn't point to a single location, you have to recalibrate the compass. You have to reset your Pebble by holding the BACK and SELECT buttons down for about 10 seconds. When the compass is recalibrating, stay away from magnetic sources. (Examples of usual magnetic sources: the charging cable of your Pebble or a Macbook, loudspeakers, fridge.)</li>
    <li>There are magnetic sources nearby. Stay away from power lines, fridges, big electronic appliances etc.</li>
    <li>The magnet in your Pebble's charging cable interferes with the compass. The compass cannot be used when the phone is charging.</li>
   </ul>
  </li>
- <li>The distance is not changing altough I'm moving
+ <li>The distance is not changing although I'm moving
   <ul>
    <li>Is your phone moving with you? Your location is based on the location of your phone.</li>
    <li>Open the settings (from the Pebble app in your phone) and set update interval to something else than automatic. (Automatic doesn't work for all iOS devices.)</li>
@@ -62,7 +64,7 @@ up-to-date heading and distance to your target.</p>
 <p>You can set targets also using the form below or via an API. Just POST a JSON object
 with <tt>position</tt> element in the root level, and a new pin will be pushed to your
 Timeline. The object will be pushed to the Pebble Timeline. If you insert a <tt>pin</tt>
-element (<a href="http://developer.getpebble.com/guides/timeline/pin-structure/">see 
+element (<a href="http://developer.getpebble.com/guides/timeline/pin-structure/">see
 Timeline Pin Structure</a>) to your JSON object, it will be passed on as is. Otherwise
 a new pin with some basic properties is created automatically. <tt>Open Watch App</tt>
 action is added to all pins.</p>
@@ -84,7 +86,7 @@ to the end of the configuration screen.</p>
     }
   },
   "pin": {
-    // you can specify an id but it will be overridden 
+    // you can specify an id but it will be overridden
     // "id": "1",
     "time": "2015-04-29T16:07:22Z",
     "layout": {
@@ -159,7 +161,7 @@ curl -X POST http://getback.timelinepush.com/$USERTOKEN/place/new \
 var userToken = '<span class="codetoken">{{userToken}}</span>';
 // add your timeline token here
 var timelineToken = '<span class="codetoken">{{timelineToken}}</span>';
-var url = '<span id="docloc">http://getback.timelinepush.com</span>/' + 
+var url = '<span id="docloc">http://getback.timelinepush.com</span>/' +
   userToken + '/place/new';
 var req = new XMLHttpRequest();
 req.onload = function() {
@@ -192,7 +194,7 @@ to your timeline, consider implementing your own API server. You can start by cl
 <div id="support">
 <h2>Show your support</h2>
 <p>The Get Back in Time app is provided free of charge. I get no compensation for the
-development of the app. In addition, I'm paying 
+development of the app. In addition, I'm paying
 <a href="https://www.heroku.com/pricing">Heroku</a> $84 per year to keep the server
 running 24/7.</p>
 <p>If you like the functionality of the app and would like to show your support and
@@ -245,7 +247,7 @@ coordinates are converted to place names using <a href="http://www.gisgraphy.com
   if (dl) {
     dl.textContent = loc.protocol + '//' + loc.host;
   }
-  
+
   var ts = document.getElementById('troubleshooting');
   var lis = ts.getElementsByTagName('li');
   for (var i=0; i<lis.length; i++) {
