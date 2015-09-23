@@ -38,23 +38,23 @@ Pebble.addEventListener("ready", function(e) {
     storeCurrentPosition();
   }
   else {
-    console.log("Target location known:" + lon2 + ',' + lat2);
+    // console.log("Target location known:" + lon2 + ',' + lat2);
   }
   startWatcher();
   if (Pebble.getTimelineToken) {
     Pebble.getTimelineToken(
       function (token) {
         timelineToken = token;
-        console.log('Got timeline token ' + timelineToken);
+        // console.log('Got timeline token ' + timelineToken);
         localStorage.setItem("timelineToken", timelineToken);
       },
       function (error) {
-        console.log('Error getting timeline token: ' + error);
+        // console.log('Error getting timeline token: ' + error);
       }
     );
   }
   else {
-    console.log('Timeline not supported (no timeline token)');
+    console.warn('Timeline not supported (no timeline token)');
   }
   // sending id from phone to watch is just a signal that
   // the phone is ready to accept app messages (e.g. id)
@@ -63,21 +63,21 @@ Pebble.addEventListener("ready", function(e) {
   sendNextMessage();
   getHistoryFromServer();
   initialized = true;
-  console.log("JavaScript app ready and running!");
+  // console.log("JavaScript app ready and running!");
 });
 
 Pebble.addEventListener("appmessage",
   function(e) {
     if (e && e.payload && e.payload.cmd) {
-      console.log("Got command: " + e.payload.cmd + ' (' + e.payload.id + ')');
+      // console.log("Got command: " + e.payload.cmd + ' (' + e.payload.id + ')');
       switch (e.payload.cmd) {
         case 'set':
           if (!e.payload.id || (e.payload.id < 0)) {
-            console.log('Setting new target (' + e.payload.id + ')');
+            // console.log('Setting new target (' + e.payload.id + ')');
             storeCurrentPosition();
           }
           else {
-            console.log('Getting data for place ' + e.payload.id);
+            // console.log('Getting data for place ' + e.payload.id);
             getPositionFromServer(e.payload.id);
           }
           break;
@@ -115,32 +115,32 @@ Pebble.addEventListener("showConfiguration",
 
 Pebble.addEventListener("webviewclosed",
   function(e) {
-    console.log(e.response);
+    // console.log(e.response);
     var options = JSON.parse(decodeURIComponent(e.response));
-    console.log("Webview window returned: " + JSON.stringify(options));
+    // console.log("Webview window returned: " + JSON.stringify(options));
     units = (options.units == 'imperial') ? 'imperial' : 'metric';
     localStorage.setItem("units", units);
-    console.log("Units set to: " + units);
+    // console.log("Units set to: " + units);
     interval = parseInt(options.interval) || 0;
     localStorage.setItem("interval", interval);
-    console.log("Interval set to: " + interval);
+    // console.log("Interval set to: " + interval);
     if (interval > 1) {
       locationOptions.timeout = (interval - 1) * 1000;
     }
     sens = parseInt(options.sens) || 5;
     localStorage.setItem("sens", sens);
-    console.log("Sentitivity set to: " + sens);
+    // console.log("Sentitivity set to: " + sens);
     var msg = {"units": units,
                "sens": parseInt(sens)};
     messageQueue.push(msg);
     sendNextMessage();
-    console.log('was: ' + lat2 + ', ' + lon2 + ')');
+    // console.log('was: ' + lat2 + ', ' + lon2 + ')');
     if (options.chosenPos) {
      var latlon = options.chosenPos.split(', ');
      lat2 = parseFloat(latlon[0]);
      lon2 = parseFloat(latlon[1]);
     }
-    console.log('is: ' + lat2 + ', ' + lon2 + ')');
+    // console.log('is: ' + lat2 + ', ' + lon2 + ')');
     calculate();
     startWatcher();
     getHistoryFromServer();
@@ -156,14 +156,14 @@ function sendNextMessage() {
     processing = 0;
   }
   else if (processing) {
-    console.log('Waiting for an earlier message, ' + processed_time + ' ms passed... (' + messageQueue.length + ' messages waiting!)');
+    // console.log('Waiting for an earlier message, ' + processed_time + ' ms passed... (' + messageQueue.length + ' messages waiting!)');
     setTimeout(sendNextMessage, TTL-processed_time+20);
     return;
   }
   if ((messageQueue.length > 0) && messageQueue[0]) {
-    console.log('Sending message 1/' + messageQueue.length);
+    // console.log('Sending message 1/' + messageQueue.length);
     Pebble.sendAppMessage(messageQueue[0], appMessageAck, appMessageNack);
-    console.log("Sent message to Pebble! " + messageQueue.length + ': ' + JSON.stringify(messageQueue[0]));
+    // console.log("Sent message to Pebble! " + messageQueue.length + ': ' + JSON.stringify(messageQueue[0]));
     processing = now;
   }
 }
@@ -172,32 +172,34 @@ function appMessageAck(e) {
   processing = 0;
   errorCount = 0;
   messageQueue.shift();
-  console.log('Message accepted by Pebble! (' + messageQueue.length + ' messages waiting!)');
+  // console.log('Message accepted by Pebble! (' + messageQueue.length + ' messages waiting!)');
   sendNextMessage();
 }
 
 function appMessageNack(e) {
   processing = 0;
   if (e && e.data && e.data.transactionId) {
-    console.log("Rejected message id: " + e.data.transactionId);
+    // console.log("Rejected message id: " + e.data.transactionId);
   }
   if (errorCount >= MAX_ERRORS) {
     messageQueue.shift();
   }
   else {
     errorCount++;
-    console.log("Retrying, " + errorCount);
+    // console.log("Retrying, " + errorCount);
   }
   console.warn('Message rejected by Pebble! ' + e.error + ' (' + messageQueue.length + ' messages waiting!)');
   sendNextMessage();
 }
 
 function locationSuccess(position) {
+  /*
   console.log("Got location " +
     position.coords.latitude + ',' +
     position.coords.longitude + ', heading at ' +
     position.coords.heading + ', accuracy ' +
     position.coords.accuracy);
+  */
   lat1 = position.coords.latitude;
   lon1 = position.coords.longitude;
   speed = position.coords.speed;
@@ -228,7 +230,7 @@ function addLocation(position) {
     };
     rgc.onload = function(res) {
       var json = this.responseText;
-      console.log("Got: " + json + " from reverse geocoder");
+      // console.log("Got: " + json + " from reverse geocoder");
       var latlon = Math.round(position.coords.latitude*1000)/1000 + ',' +
                    Math.round(position.coords.longitude*1000)/1000;
       var now = new Date().toISOString();
@@ -253,7 +255,7 @@ function addLocation(position) {
           if (!placeName && gres.result[0].isIn) {
             placeName = gres.result[0].isIn;
           }
-          console.log("Reverse geocoded address: " + placeName);
+          // console.log("Reverse geocoded address: " + placeName);
           obj.pin.layout.title = placeName;
         }
       }
@@ -262,24 +264,24 @@ function addLocation(position) {
       }
       // add place to server
       var url = serverAddress + userToken + '/place/new';
-      console.log('Adding place to ' + url + ': ' + JSON.stringify(obj));
+      // console.log('Adding place to ' + url + ': ' + JSON.stringify(obj));
       var req = new XMLHttpRequest();
       req.onload = function(res) {
         var json = this.responseText;
-        console.log('Got ' + json);
+        // console.log('Got ' + json);
         if (!json || (json.substr(0, 1) != '{')) {
           console.warn("Error sending place to server: " + json);
           return;
         }
         var obj = JSON.parse(json);
-        console.log("Sent place to server: " + obj._id);
+        // console.log("Sent place to server: " + obj._id);
         getHistoryFromServer();
       };
       req.open("post", url, true);
       req.setRequestHeader('Content-Type', 'application/json');
       req.send(JSON.stringify(obj));
     };
-    console.log("Trying to reverse geocode: " + url);
+    // console.log("Trying to reverse geocode: " + url);
     rgc.send(null);
   }
 }
@@ -289,9 +291,11 @@ function storeLocation(position) {
   lon2 = position.coords.longitude;
   localStorage.setItem("lat2", lat2);
   localStorage.setItem("lon2", lon2);
+  /*
   console.log("Stored location " +
     position.coords.latitude + ',' +
     position.coords.longitude);
+  */
   calculate();
 }
 
@@ -348,7 +352,7 @@ function locationError(error) {
 }
 
 function storeCurrentPosition() {
-  console.log("Attempting to store current position.");
+  // console.log("Attempting to store current position.");
   var msg = {"dist": 0,
              "head": 0};
   messageQueue.push(msg);
@@ -379,19 +383,21 @@ function parseServerResponse() {
     console.warn('No position from server: ' + this.responseText);
     return false;
   }
+  /*
   console.log('Got position from server: ' +
      obj.position.coords.latitude + ', ' +
      obj.position.coords.longitude);
+  */
   storeLocation(obj.position);
 }
 
 function getHistoryFromServer() {
   var url = serverAddress + userToken + '/places/' + MAX_PLACES;
-  console.log('Getting history from ' + url);
+  // console.log('Getting history from ' + url);
   var req = new XMLHttpRequest();
   req.onload = parseHistory;
   req.onerror = function(e) {
-    console.log(JSON.stringify(e));
+    console.warn('History error: ' + JSON.stringify(e));
   };
   req.open("get", url, true);
   req.send();
@@ -399,9 +405,9 @@ function getHistoryFromServer() {
 
 function parseHistory() {
   var res = this.responseText;
-  console.log('History: ' + res);
+  // console.log('History: ' + res);
   if (!res) {
-    console.warn('No response from server');
+    console.warn('No history response from server');
     return false;
   }
   if ((this.status != 200) || (this.responseText.substr(0,1) != '[')) {
@@ -413,7 +419,7 @@ function parseHistory() {
     console.warn('No location history: ' + this.responseText);
     return false;
   }
-  console.log('Got ' + places.length + ' history positions');
+  // console.log('Got ' + places.length + ' history positions');
   var menuItemCount = 0;
   for (var i=0; i<places.length; i++) {
     if (!places[i]._id || places[i]._id < 0 || places[i]._id > Math.pow(2, 32) -1) {
@@ -442,7 +448,7 @@ function parseHistory() {
                'subtitle': title};
     messageQueue.push(msg);
   }
-  console.log('Pushed ' + messageQueue.length + ' messages to queue...');
+  // console.log('Pushed ' + messageQueue.length + ' messages to queue...');
   sendNextMessage();
 }
 
@@ -454,18 +460,18 @@ function startWatcher() {
     navigator.geolocation.clearWatch(locationWatcher);
   }
   if (interval > 0) {
-    console.log('Interval is ' + interval + ', using getCurrentPosition and setInterval');
+    // console.log('Interval is ' + interval + ', using getCurrentPosition and setInterval');
     navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
     locationInterval = setInterval(function() {
-      console.log('Interval of ' + interval + ' seconds passed');
+      // console.log('Interval of ' + interval + ' seconds passed');
       navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
     }, interval * 1000);
   }
   else {
-    console.log('Interval not set, using watchPosition');
+    // console.log('Interval not set, using watchPosition');
     navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
     locationWatcher = navigator.geolocation.watchPosition(locationSuccess, locationError, locationOptions);
-    console.log("Started location watcher: " + locationWatcher);
+    // console.log("Started location watcher: " + locationWatcher);
   }
   // for testing: randomize movement!
   /*

@@ -181,38 +181,40 @@ void compass_heading_handler(CompassHeadingData heading_data){
     case CompassStatusDataInvalid:
       compass_state = CALIBRATING;
       hints[2] = "Calibrating compass...";
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "Calibrating compass");
+      // APP_LOG(APP_LOG_LEVEL_DEBUG, "Calibrating compass");
       layer_set_hidden(head_layer, true);
       layer_set_hidden(text_layer_get_layer(calib_hint_layer), false);
-      break;
+      break; // could as well return...
     case CompassStatusCalibrating:
       compass_state = FINETUNING;
       hints[2] = "Fine tuning compass...";
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "Fine tuning compass");
-      layer_set_hidden(head_layer, true);
-      layer_set_hidden(text_layer_get_layer(calib_hint_layer), false);
-      // continue to default
+      show_hint(2);
+      // APP_LOG(APP_LOG_LEVEL_DEBUG, "Fine tuning compass");
+      layer_set_hidden(head_layer, false);
+      layer_set_hidden(text_layer_get_layer(calib_hint_layer), true);
       break;
     case CompassStatusCalibrated:
       compass_state = CALIBRATED;
       hints[2] = "Compass calibrated";
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "Compass calibrated");
+      // APP_LOG(APP_LOG_LEVEL_DEBUG, "Compass calibrated");
       layer_set_hidden(head_layer, false);
       layer_set_hidden(text_layer_get_layer(calib_hint_layer), true);
-      // continue to default
-    default:
       if (strcmp(text_layer_get_text(hint_layer), "Fine tuning compass...") == 0) {
         text_layer_set_text(hint_layer, hints[0]);
       }
-      // orientation = heading_data.true_heading;
-      // orientation = (360 - TRIGANGLE_TO_DEG(heading_data.true_heading))%360;
-      orientation = 360 - (((int)(heading_data.magnetic_heading * 360 / TRIG_MAX_ANGLE) % 360 + 360) % 360);
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "Magnetic heading: %d (deg %ld), orientation %d°",(int) heading_data.true_heading, TRIGANGLE_TO_DEG(heading_data.true_heading), orientation);
-      layer_mark_dirty(head_layer);
-      layer_mark_dirty(info_layer);
+      break;
+    default:
+      APP_LOG(APP_LOG_LEVEL_WARNING, "Unknown compass state %d!", heading_data.compass_status);
       return;
   }
-  show_hint(2);
+  if (compass_state != CALIBRATING) {
+    // orientation = heading_data.true_heading;
+    // orientation = (360 - TRIGANGLE_TO_DEG(heading_data.true_heading))%360;
+    orientation = 360 - (((int)(heading_data.magnetic_heading * 360 / TRIG_MAX_ANGLE) % 360 + 360) % 360);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Magnetic heading: %d (deg %ld), orientation %d°",(int) heading_data.true_heading, TRIGANGLE_TO_DEG(heading_data.true_heading), orientation);
+    layer_mark_dirty(head_layer);
+    layer_mark_dirty(info_layer);
+  }
 
 /* this might be too confusing... perhaps make it optional some day?
   if (pheading >= 0) {
@@ -291,7 +293,7 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
     }
     graphics_fill_circle(ctx, needle_axis, radius);
   }
-  else if (compass_state != CALIBRATED) {
+  else if (compass_state == CALIBRATING) {
     layer_set_hidden(text_layer_get_layer(target_layer), true);
     layer_set_hidden(text_layer_get_layer(target2_layer), true);
     int radius = distance * 2;
@@ -311,7 +313,7 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
     gpath_rotate_to(head_path, compass_heading);
     gpath_draw_filled(ctx, head_path);
   }
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance: %d, orientation %d, heading %d, phone heading %d, compass heading %d", (int) distance, orientation, heading, pheading, (heading - orientation));
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance: %d, orientation %d, heading %d, phone heading %d, compass heading %d", (int) distance, orientation, heading, pheading, (heading - orientation));
 }
 
 static void send_message(const char *cmd, int32_t id) {
@@ -347,7 +349,7 @@ static void menu_show_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 void out_sent_handler(DictionaryIterator *sent, void *context) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Message accepted by phone!");
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Message accepted by phone!");
   hints[3] = "Target set";
   hints[4] = NULL;
   show_hint(3);
@@ -370,7 +372,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   Tuple *count_tuple = dict_find(iter, COUNT_KEY);
   if (count_tuple) {
     history_count = count_tuple->value->int8;
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Found %d places in history", history_count);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Found %d places in history", history_count);
     if (history_count > MAX_PLACE_COUNT) {
       history_count = MAX_PLACE_COUNT;
     }
@@ -386,18 +388,18 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     if (menu_layer) {
       layer_mark_dirty(menu_layer_get_layer(menu_layer));
     }
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Found place %ld (%d): %s/%s", place->id, place_index, place->title, place->subtitle);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Found place %ld (%d): %s/%s", place->id, place_index, place->title, place->subtitle);
     hints[0] = "SELECT for history menu";
   }
 
   Tuple *id_tuple = dict_find(iter, ID_KEY);
   if (id_tuple) {
-    // what's the best way to find out if launch_get_args is supported?
+// what's the best way to find out if launch_get_args is supported?
 #ifdef PBL_PLATFORM_BASALT
     int32_t idval = id_tuple->value->int32;
     if ((idval < 0) && (launch_reason() == APP_LAUNCH_TIMELINE_ACTION)) {
       uint32_t id = launch_get_args();
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "Launched from timeline, pin ID: %ld", id);
+      // APP_LOG(APP_LOG_LEVEL_DEBUG, "Launched from timeline, pin ID: %ld", id);
       send_message(set_cmd, (int32_t) id);
       hints[3] = "Getting target information...";
       show_hint(3);
@@ -413,7 +415,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     location_updated = time(NULL);
     hints[3] = "Target set";
     heading = head_tuple->value->int16;
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated heading to %d", heading);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated heading to %d", heading);
     static char target_text[6];
     snprintf(target_text, sizeof(target_text), "%d°", heading);
     static char *target2_text = "---";
@@ -453,26 +455,26 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   Tuple *units_tuple = dict_find(iter, UNITS_KEY);
   if (units_tuple) {
     strcpy(units, units_tuple->value->cstring);
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Units: %s", units);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Units: %s", units);
   }
   Tuple *phead_tuple = dict_find(iter, PHONEHEAD_KEY);
   if (phead_tuple) {
     pheading = phead_tuple->value->int16;
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated phone heading to %d", pheading);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated phone heading to %d", pheading);
   }
   Tuple *acc_tuple = dict_find(iter, ACCURACY_KEY);
   if (acc_tuple) {
     accuracy = acc_tuple->value->int16;
     int16_t show_acc = accuracy;
-    char *acc_unit = "m";
+    // char *acc_unit = "m";
     if (strcmp(units, "imperial") == 0) {
       show_acc = (int) (accuracy / YARD_LENGTH);
-      acc_unit = "y";
+      // acc_unit = "y";
     }
     static char acc_text[6];
     snprintf(acc_text, sizeof(acc_text), "%d", show_acc);
     text_layer_set_text(acc_layer, acc_text);
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated accuracy to %d %s (%d)", show_acc, acc_unit, accuracy);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated accuracy to %d %s (%d)", show_acc, acc_unit, accuracy);
   }
   Tuple *speed_tuple = dict_find(iter, SPEED_KEY);
   if (speed_tuple) {
@@ -482,7 +484,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
       snprintf(speed_text, sizeof(speed_text), "%d", (int) speed);
     }
     text_layer_set_text(speed_layer, speed_text);
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated speed to %d", speed);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated speed to %d", speed);
   }
   Tuple *dist_tuple = dict_find(iter, DIST_KEY);
   if (dist_tuple) {
@@ -501,7 +503,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
       reset_dist_bg(NULL);
     }
     distance = dist_tuple->value->int32;
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated distance to %d", (int) distance);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated distance to %d", (int) distance);
   }
   int32_t show_dist = distance;
   if (strcmp(units, "imperial") == 0) {
@@ -527,13 +529,13 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     compass_service_unsubscribe();
     compass_service_set_heading_filter(TRIG_MAX_ANGLE*sensitivity/360);
     compass_service_subscribe(&compass_heading_handler);
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Sensitivity: %d", sensitivity);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Sensitivity: %d", sensitivity);
   }
   static char dist_text[9];
   snprintf(dist_text, sizeof(dist_text), "%d %s", (int) show_dist, unit);
   text_layer_set_text(dist_layer, dist_text);
   show_hint(0);
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance updated: %s (%d)", text_layer_get_text(dist_layer), (int) distance);
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance updated: %s (%d)", text_layer_get_text(dist_layer), (int) distance);
 }
 
 void in_dropped_handler(AppMessageResult reason, void *context) {
@@ -546,7 +548,7 @@ static uint16_t menu_get_num_sections_callback(MenuLayer *menu_layer, void *data
 }
 
 static uint16_t menu_get_num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
-  APP_LOG(APP_LOG_LEVEL_WARNING, "Refreshing menu, %d items", history_count);
+  // APP_LOG(APP_LOG_LEVEL_WARNING, "Refreshing menu, %d items", history_count);
   return history_count;
 }
 
@@ -567,7 +569,7 @@ static void menu_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuI
 void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *data) {
   text_layer_set_text(hint_layer, "Loading data...");
   Place *place = &places[cell_index->row];
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "SELECT pushed, getting info for history place %lu", place->id);
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "SELECT pushed, getting info for history place %lu", place->id);
   send_message(set_cmd, place->id);
   window_stack_pop(animated);
 }
