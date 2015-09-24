@@ -19,6 +19,8 @@ static TextLayer *calib_hint_layer;
 static Layer *head_layer;
 static Layer *info_layer;
 static char *hints[MAX_HINT_COUNT];
+static char target_text[6];
+static char *target2_text = "---";
 static int current_hint = 0;
 static int32_t distance = 0;
 static int16_t heading = 0;
@@ -280,6 +282,10 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
 
 static void head_layer_update_callback(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_context_set_stroke_color(ctx, GColorBlack);
+#ifdef PBL_SDK_3
+  graphics_context_set_stroke_width(ctx, 4);
+#endif
   if (distance <= accuracy) {
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance (%ld) less than accuracy (%d) - drawing circle", distance, accuracy);
     layer_set_hidden(text_layer_get_layer(target_layer), true);
@@ -311,7 +317,15 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
     int compass_heading = (TRIG_MAX_ANGLE / 360) * (heading - orientation);
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance (%ld) more than accuracy (%d) - drawing arrow towards %d (%d)", distance, accuracy, (heading - orientation), compass_heading);
     gpath_rotate_to(head_path, compass_heading);
-    gpath_draw_filled(ctx, head_path);
+    AccelData accel = (AccelData) { .x = 0, .y = 0, .z = 0 };
+    accel_service_peek(&accel);
+    bool leveled = ((accel.y > -150) && (accel.y < 150));
+    if ((compass_state == CALIBRATED) && leveled) {
+      gpath_draw_filled(ctx, head_path);
+    }
+    else {
+      gpath_draw_outline(ctx, head_path);
+    }
   }
   // APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance: %d, orientation %d, heading %d, phone heading %d, compass heading %d", (int) distance, orientation, heading, pheading, (heading - orientation));
 }
@@ -416,9 +430,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     hints[3] = "Target set";
     heading = head_tuple->value->int16;
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated heading to %d", heading);
-    static char target_text[6];
     snprintf(target_text, sizeof(target_text), "%d°", heading);
-    static char *target2_text = "---";
     if (heading < 0) {
       APP_LOG(APP_LOG_LEVEL_WARNING, "Negative heading %d", heading);
       target2_text = "N";
