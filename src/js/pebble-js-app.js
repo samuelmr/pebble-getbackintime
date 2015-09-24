@@ -308,21 +308,37 @@ function calculate() {
     if (!lon2) {
       lon2 = 0;
     }
-    var dLat = toRad(lat2-lat1);
-    var dLon = toRad(lon2-lon1);
-    var l1 = toRad(lat1);
-    var l2 = toRad(lat2);
-    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(l1) * Math.cos(l2);
+
+    var φ1 = toRad(lat1);
+    var φ2 = toRad(lat2);
+    var Δφ = toRad(lat2-lat1);
+    var Δλ = toRad(lon2-lon1);
+    /*
+    var φ1 = toRad(lat1),  λ1 = toRad(lon1);
+    var φ2 = toRad(lon1), λ2 = toRad(lon2);
+    var Δφ = φ2 - φ1;
+    var Δλ = λ2 - λ1;
+    */
+    var a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
     var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    dist = Math.round(R * c);
-    var y = Math.sin(dLon) * Math.cos(l2);
-    var x = Math.cos(l1)*Math.sin(l2) -
-            Math.sin(l1)*Math.cos(l2)*Math.cos(dLon);
-    head = toDeg(Math.round(Math.atan2(y, x))) % 360;
-    while (head < 0) {
-      head += 360;
-    }
+    var dist = Math.round(R * c);
+
+/*
+    var y = Math.sin(λ2-λ1) * Math.cos(φ2);
+    var x = Math.cos(φ1)*Math.sin(φ2) -
+            Math.sin(φ1)*Math.cos(φ2)*Math.cos(λ2-λ1);
+    var head = Math.round(toDeg(Math.atan2(y, x)));
+*/
+
+    var y = Math.sin(Δλ) * Math.cos(φ2);
+    var x = Math.cos(φ1)*Math.sin(φ2) -
+            Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+    var θ = Math.atan2(y, x);
+
+    var head = Math.round((toDeg(θ)+360) % 360);
+
     if ((dist != prevDist) || (head != prevHead)) {
       msg = {"dist": dist,
              "head": head,
