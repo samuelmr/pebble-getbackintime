@@ -229,16 +229,17 @@ void compass_heading_handler(CompassHeadingData heading_data){
 }
 
 static void info_layer_update_callback(Layer *layer, GContext *ctx) {
-  GRect bounds = layer_get_bounds(layer);
-  graphics_context_set_fill_color(ctx, GColorBlack);
-  graphics_fill_rect(ctx, bounds, 0, GCornerNone);
-
   if(!bluetooth_connection_service_peek()) {
     text_layer_set_text(track_layer, "!");
     text_layer_set_text(speed_layer, "!");
     text_layer_set_text(acc_layer, "!");
-    text_layer_set_text(dist_layer, "No phone connection!");
+    text_layer_set_text(dist_layer, "No phone!");
   }
+
+#ifdef PBL_RECT
+  GRect bounds = layer_get_bounds(layer);
+  graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_fill_rect(ctx, bounds, 0, GCornerNone);
 
   int goingto = orientation;
   static char bearing_text[6] = "~";
@@ -278,6 +279,8 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
   GRect acc_ind = GRect(138, acc_size, 6, 30-acc_size);
   graphics_context_set_fill_color(ctx, get_bar_color(30-acc_size));
   graphics_fill_rect(ctx, acc_ind, 0, GCornerNone);
+#endif
+
 }
 
 static void head_layer_update_callback(Layer *layer, GContext *ctx) {
@@ -606,12 +609,12 @@ static void window_load(Window *window) {
   head_layer = layer_create(bounds);
   layer_set_update_proc(head_layer, head_layer_update_callback);
   head_path = gpath_create(&HEAD_PATH_POINTS);
-  needle_axis = GPoint(bounds.size.w/2, 78);
+  needle_axis = GPoint(bounds.size.w/2, PBL_IF_RECT_ELSE(78, bounds.size.h/2));
   gpath_move_to(head_path, needle_axis);
   layer_add_child(window_layer, head_layer);
   max_radius = (bounds.size.h - 81)/2;
 
-  dist_layer = text_layer_create(GRect(0, bounds.size.h-49, bounds.size.w, 35));
+  dist_layer = text_layer_create(GRect(0, PBL_IF_RECT_ELSE(bounds.size.h-49, bounds.size.h-36), bounds.size.w, 35));
   text_layer_set_font(dist_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_color(dist_layer, GColorBlack);
   text_layer_set_background_color(dist_layer, GColorClear);
@@ -635,7 +638,7 @@ static void window_load(Window *window) {
   text_layer_set_text(target2_layer, "wait");
   layer_add_child(window_layer, text_layer_get_layer(target2_layer));
 
-  hint_layer_size = GRect(0, bounds.size.h-15, bounds.size.w, 15);
+  hint_layer_size = GRect(0, PBL_IF_RECT_ELSE(bounds.size.h-15, bounds.size.h), bounds.size.w, PBL_IF_RECT_ELSE(15, 0));
   hint_layer = text_layer_create(hint_layer_size);
   text_layer_set_font(hint_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_text_color(hint_layer, GColorWhite);
@@ -644,7 +647,7 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(hint_layer));
   show_hint(1);
 
-  track_label_layer = text_layer_create(GRect(0, 0, 42, 18));
+  track_label_layer = text_layer_create(GRect(0, 0, 42, PBL_IF_RECT_ELSE(18, 0)));
   text_layer_set_font(track_label_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_text_color(track_label_layer, GColorWhite);
   text_layer_set_background_color(track_label_layer, GColorClear);
@@ -652,7 +655,7 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(track_label_layer));
   text_layer_set_text(track_label_layer, "bearing");
 
-  track_layer = text_layer_create(GRect(0, 14, 42, 14));
+  track_layer = text_layer_create(GRect(0, 14, 42, PBL_IF_RECT_ELSE(14, 0)));
   text_layer_set_font(track_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD));
   text_layer_set_text_color(track_layer, GColorWhite);
   text_layer_set_background_color(track_layer, GColorClear);
@@ -660,7 +663,7 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(track_layer));
   text_layer_set_text(track_layer, "~");
 
-  speed_label_layer = text_layer_create(GRect(48, 0, 42, 18));
+  speed_label_layer = text_layer_create(GRect(48, 0, 42, PBL_IF_RECT_ELSE(18, 0)));
   text_layer_set_font(speed_label_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_text_color(speed_label_layer, GColorWhite);
   text_layer_set_background_color(speed_label_layer, GColorClear);
@@ -668,7 +671,7 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(speed_label_layer));
   text_layer_set_text(speed_label_layer, "speed");
 
-  speed_layer = text_layer_create(GRect(48, 14, 42, 14));
+  speed_layer = text_layer_create(GRect(48, 14, 42, PBL_IF_RECT_ELSE(14, 0)));
   text_layer_set_font(speed_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD));
   text_layer_set_text_color(speed_layer, GColorWhite);
   text_layer_set_background_color(speed_layer, GColorClear);
@@ -676,7 +679,7 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(speed_layer));
   text_layer_set_text(speed_layer, "~");
 
-  acc_label_layer = text_layer_create(GRect(96, 0, 42, 18));
+  acc_label_layer = text_layer_create(GRect(96, 0, 42, PBL_IF_RECT_ELSE(18, 0)));
   text_layer_set_font(acc_label_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_text_color(acc_label_layer, GColorWhite);
   text_layer_set_background_color(acc_label_layer, GColorClear);
@@ -684,7 +687,7 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(acc_label_layer));
   text_layer_set_text(acc_label_layer, "gps acc.");
 
-  acc_layer = text_layer_create(GRect(96, 14, 42, 14));
+  acc_layer = text_layer_create(GRect(96, 14, 42, PBL_IF_RECT_ELSE(14, 0)));
   text_layer_set_font(acc_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD));
   text_layer_set_text_color(acc_layer, GColorWhite);
   text_layer_set_background_color(acc_layer, GColorClear);

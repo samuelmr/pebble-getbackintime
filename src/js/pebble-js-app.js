@@ -489,8 +489,8 @@ function startWatcher() {
     locationWatcher = navigator.geolocation.watchPosition(locationSuccess, locationError, locationOptions);
     // console.log("Started location watcher: " + locationWatcher);
   }
-  // for testing: randomize movement!
   /*
+  // for testing: randomize movement!
   window.navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
   if (!interval) {
     interval = 10;
@@ -501,6 +501,7 @@ function startWatcher() {
     speed = Math.random() * 60;
     accuracy = Math.random() * 60;
     phoneHead = Math.random() * 360;
+    console.log(lat1 + ', ' + lon1 + ', ' + speed + ', ' + accuracy);
     calculate();
   }, interval * 1000);
   console.log("Started fake location watcher: " + locationWatcher);
