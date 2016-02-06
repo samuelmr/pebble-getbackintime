@@ -54,7 +54,12 @@ static GPath *head_path;
 static GPoint needle_axis;
 static GRect hint_layer_size;
 static const double YARD_LENGTH = 0.9144;
-static const double YARDS_IN_MILE = 1760;
+static const int YARDS_IN_MILE = 1760;
+static const int NAUTICAL_MILE = 1852;
+/* if distance is greater than this, use km/m instead of m/yd */
+static const int UNIT_TRESHOLD = 2999;
+/* if distance is smaller than this, show one decimal precision */
+static const int FRACTION_TRESHOLD = 100;
 static AppTimer *current_timer;
 static MenuLayer *menu_layer;
 
@@ -520,24 +525,44 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     distance = dist_tuple->value->int32;
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated distance to %d", (int) distance);
   }
-  int32_t show_dist = distance;
+  int32_t dist_times_ten = 10 * distance;
   if (strcmp(units, "imperial") == 0) {
     unit = "yd";
-    show_dist = distance / YARD_LENGTH;
+    dist_times_ten = (int) (dist_times_ten / YARD_LENGTH);
+  }
+  else if (strcmp(units, "nautical") == 0) {
+    unit = "nm";
+    dist_times_ten = (int) (dist_times_ten / NAUTICAL_MILE);
   }
   else {
     unit = "m";
   }
-  if (show_dist > 2900) {
+  static char dist_text[9];
+  if (dist_times_ten > (10 * UNIT_TRESHOLD)) {
     if (strcmp(units, "imperial") == 0) {
-      show_dist = (int) (show_dist / YARDS_IN_MILE);
+      /* some precision is lost... */
+      dist_times_ten = (int) (dist_times_ten / YARDS_IN_MILE);
       unit = "mi";
     }
+    else if (strcmp(units, "nautical") == 0) {
+      dist_times_ten = dist_times_ten;
+      unit = "nm";
+    }
     else {
-      show_dist = (int) (show_dist / 1000);
+      dist_times_ten = (int) (dist_times_ten / 1000);
       unit = "km";
     }
   }
+  /* decimals of metrs would always be 0 */
+  if ((strcmp(unit, "m") != 0) && (dist_times_ten < FRACTION_TRESHOLD)) {
+    int whole = (int) (dist_times_ten / 10);
+    int fractions = (int) (dist_times_ten % 10);
+    snprintf(dist_text, sizeof(dist_text), "%d.%d %s", whole, fractions, unit);
+  }
+  else {
+    snprintf(dist_text, sizeof(dist_text), "%d %s", (int) (dist_times_ten/10), unit);
+  }
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Unit: %s", unit);
   Tuple *sens_tuple = dict_find(iter, SENS_KEY);
   if (sens_tuple) {
     sensitivity = sens_tuple->value->int8;
@@ -546,8 +571,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     compass_service_subscribe(&compass_heading_handler);
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Sensitivity: %d", sensitivity);
   }
-  static char dist_text[9];
-  snprintf(dist_text, sizeof(dist_text), "%d %s", (int) show_dist, unit);
+
   text_layer_set_text(dist_layer, dist_text);
   show_hint(0);
   // APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance updated: %s (%d)", text_layer_get_text(dist_layer), (int) distance);
