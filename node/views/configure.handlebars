@@ -2,9 +2,10 @@
 <h2>Configure</h2>
 <fieldset>
 <legend>Units</legend>
-<p>Show distance in meters/kilometers or yards/miles?</p>
-<label class="long"><input type="radio" name="units" value="metric" id="metric" checked="checked" /> Metric (m, km)</label>
-<label class="long"><input type="radio" name="units" value="imperial" id="imperial" /> Imperial (y, mi)</label>
+<p>Show distance in meters/kilometers, yards/miles or nautical miles?</p>
+<label class="long"><input type="radio" name="units" value="metric" id="metric" checked="checked" /> Metric (m, km)</label><br />
+<label class="long"><input type="radio" name="units" value="imperial" id="imperial" /> Imperial (y, mi)</label><br />
+<label class="long"><input type="radio" name="units" value="nautical" id="nautical" /> Nautical (nm)</label>
 </fieldset>
 <fieldset>
 <legend>Update interval</legend>
@@ -58,6 +59,7 @@ you select them from the timeline.</p>
  var tokenDiv = document.getElementById('tok');
  f.onsubmit = sendConfig;
  var imp = document.getElementById('imperial');
+ var nau = document.getElementById('nautical');
  var met = document.getElementById('metric');
  var fa = document.getElementById('fast');
  var no = document.getElementById('normal');
@@ -88,6 +90,9 @@ you select them from the timeline.</p>
   timelineToken = conf.timelineToken || '';
   if (conf.units == 'imperial') {
    document.getElementById('imperial').checked = true;
+  }
+  else if (conf.units == 'nautical') {
+   document.getElementById('nautical').checked = true;
   }
   for (var i=0; i<f.interval.options.length; i++) {
    var opt = f.interval.options[i];
@@ -338,8 +343,15 @@ you select them from the timeline.</p>
  }
  function sendConfig(e) {
   e.preventDefault();
+  var units = met.value;
+  if (imp.checked) {
+    units = imp.value;
+  }
+  if (nau.checked) {
+    units = nau.value;
+  }
   var config = {
-   units: (imp.checked ? imp.value : met.value),
+   units: units,
    interval: f.interval[f.interval.selectedIndex].value,
    sens: 5
   };

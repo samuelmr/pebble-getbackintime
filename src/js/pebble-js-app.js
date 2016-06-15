@@ -118,7 +118,7 @@ Pebble.addEventListener("webviewclosed",
     // console.log(e.response);
     var options = JSON.parse(decodeURIComponent(e.response));
     // console.log("Webview window returned: " + JSON.stringify(options));
-    units = (options.units == 'imperial') ? 'imperial' : 'metric';
+    units = options.units || 'metric';
     localStorage.setItem("units", units);
     // console.log("Units set to: " + units);
     interval = parseInt(options.interval) || 0;
