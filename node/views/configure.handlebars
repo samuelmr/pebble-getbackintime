@@ -38,15 +38,15 @@
 <form method="post" action="place/new" id="add">
 <h2>Add new place manually</h2>
 <fieldset>
-<p>Here you can set a target by entering name and coordinates manually. The targets are 
+<p>Here you can set a target by entering name and coordinates manually. The targets are
 pushed to your timeline (to current time). They won't replace your current target until
 you select them from the timeline.</p>
 <div>
  <label for="name" id="namelabel">Name:</label> <input id="name" name="name" type="text" size="40" />
 </div>
 <div>
- <label for="lat">Latitude:</label> <input id="lat" name="latitude" type="number" step="any" />
- <label for="lon">Longitude:</label> <input id="lon" name="longitude" type="number" step="any" />
+ <label for="lat">Latitude:</label> <input id="lat" name="latitude" type="number" step="any" min="-90.0" max="90.0" />
+ <label for="lon">Longitude:</label> <input id="lon" name="longitude" type="number" step="any" min="-180.0" max="180.0" />
 </div>
 <input type="submit" value="Send" />
 </fieldset>
@@ -163,7 +163,7 @@ you select them from the timeline.</p>
   getPosition();
   getHistory();
   setTokens();
-  
+
   function setTokens() {
    af.style.display = 'block';
    var h = document.createElement('h2');
@@ -274,10 +274,10 @@ you select them from the timeline.</p>
   td.className = 'time';
   if (place.time) {
    var d = new Date(place.time);
-   var dStr = months[d.getMonth()] + ' ' + 
-              d.getDate() + ' ' + 
-              d.getHours() + ':' + 
-              (d.getMinutes() < 10 ? '0' : '') + 
+   var dStr = months[d.getMonth()] + ' ' +
+              d.getDate() + ' ' +
+              d.getHours() + ':' +
+              (d.getMinutes() < 10 ? '0' : '') +
               d.getMinutes() + ' ';
    td.appendChild(document.createTextNode(dStr));
   }
@@ -332,7 +332,7 @@ you select them from the timeline.</p>
        trs[i].parentNode.removeChild(trs[i]);
      }
     }
-   }     
+   }
   }
   req.send();
  }
