@@ -563,13 +563,13 @@ static uint16_t menu_get_num_sections_callback(MenuLayer *menu_layer, void *data
 }
 
 static uint16_t menu_get_num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
-  // APP_LOG(APP_LOG_LEVEL_WARNING, "Refreshing menu, %d items", history_count);
-  return history_count;
+  // Chalk doesn't do headers well, header replaced with a basic row
+  return history_count + PBL_IF_RECT_ELSE(0, 1);
 }
 
 static int16_t menu_get_header_height_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
-  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Menu header height: %d", MENU_CELL_BASIC_HEADER_HEIGHT);
-  return MENU_CELL_BASIC_HEADER_HEIGHT;
+  // Chalk doesn't do headers well, header replaced with a basic row
+  return PBL_IF_RECT_ELSE(MENU_CELL_BASIC_HEADER_HEIGHT, 0);
 }
 
 static void menu_draw_header_callback(GContext* ctx, const Layer *cell_layer, uint16_t section_index, void *data) {
@@ -577,13 +577,27 @@ static void menu_draw_header_callback(GContext* ctx, const Layer *cell_layer, ui
 }
 
 static void menu_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index, void *data) {
-  Place *place = &places[cell_index->row];
-  menu_cell_basic_draw(ctx, cell_layer, place->title, place->subtitle, NULL);
+  int index = cell_index->row - PBL_IF_RECT_ELSE(0, 1);
+  if (index < 0) {
+    // Chalk doesn't do headers well, header replaced with a basic row
+    menu_cell_basic_draw(ctx, cell_layer, "Location history", NULL, NULL);
+  }
+  else {
+    Place *place = &places[index];
+    menu_cell_basic_draw(ctx, cell_layer, place->title, place->subtitle, NULL);
+  }
 }
 
 void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *data) {
   text_layer_set_text(hint_layer, "Loading data...");
-  Place *place = &places[cell_index->row];
+  int index = cell_index->row - PBL_IF_RECT_ELSE(0, 1);
+  if (index < 0) {
+    // Chalk doesn't do headers well, header replaced with a basic row
+    MenuIndex menu_index = (MenuIndex) {0, 1};
+    menu_layer_set_selected_index(menu_layer, menu_index, MenuRowAlignTop, false);
+    return;
+  }
+  Place *place = &places[index];
   // APP_LOG(APP_LOG_LEVEL_DEBUG, "SELECT pushed, getting info for history place %lu", place->id);
   send_message(set_cmd, place->id);
   window_stack_pop(animated);
@@ -614,7 +628,7 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, head_layer);
   max_radius = (bounds.size.h - 81)/2;
 
-  dist_layer = text_layer_create(GRect(0, PBL_IF_RECT_ELSE(bounds.size.h-49, bounds.size.h-36), bounds.size.w, 35));
+  dist_layer = text_layer_create(GRect(0, bounds.size.h-PBL_IF_RECT_ELSE(49, 45), bounds.size.w, 50));
   text_layer_set_font(dist_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_color(dist_layer, GColorBlack);
   text_layer_set_background_color(dist_layer, GColorClear);
@@ -622,7 +636,7 @@ static void window_load(Window *window) {
   text_layer_set_text(dist_layer, "Initializing");
   layer_add_child(window_layer, text_layer_get_layer(dist_layer));
 
-  target_layer = text_layer_create(GRect(0, 32, 48, 35));
+  target_layer = text_layer_create(GRect(PBL_IF_RECT_ELSE(0, 14), 32, 48, 35));
   text_layer_set_font(target_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_color(target_layer, GColorBlack);
   text_layer_set_background_color(target_layer, GColorClear);
@@ -630,7 +644,7 @@ static void window_load(Window *window) {
   text_layer_set_text(target_layer, "Please");
   layer_add_child(window_layer, text_layer_get_layer(target_layer));
 
-  target2_layer = text_layer_create(GRect(bounds.size.w-48, 32, 48, 35));
+  target2_layer = text_layer_create(GRect(bounds.size.w-PBL_IF_RECT_ELSE(48, 62), 32, 48, 35));
   text_layer_set_font(target2_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
   text_layer_set_text_color(target2_layer, GColorBlack);
   text_layer_set_background_color(target2_layer, GColorClear);
@@ -638,7 +652,7 @@ static void window_load(Window *window) {
   text_layer_set_text(target2_layer, "wait");
   layer_add_child(window_layer, text_layer_get_layer(target2_layer));
 
-  hint_layer_size = GRect(0, PBL_IF_RECT_ELSE(bounds.size.h-15, bounds.size.h), bounds.size.w, PBL_IF_RECT_ELSE(15, 0));
+  hint_layer_size = GRect(0, bounds.size.h-PBL_IF_RECT_ELSE(15, 0), bounds.size.w, PBL_IF_RECT_ELSE(15, 0));
   hint_layer = text_layer_create(hint_layer_size);
   text_layer_set_font(hint_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_text_color(hint_layer, GColorWhite);
@@ -695,7 +709,7 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(acc_layer));
   text_layer_set_text(acc_layer, "~");
 
-  calib_hint_layer = text_layer_create(GRect(8, 40, bounds.size.w-16, 70));
+  calib_hint_layer = text_layer_create(GRect(PBL_IF_RECT_ELSE(8, 0), 40, bounds.size.w-PBL_IF_RECT_ELSE(16, 9), 70));
   text_layer_set_font(calib_hint_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   text_layer_set_text_color(calib_hint_layer, GColorWhite);
   text_layer_set_background_color(calib_hint_layer, GColorBlack);
