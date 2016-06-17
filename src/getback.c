@@ -733,14 +733,14 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(acc_layer));
   text_layer_set_text(acc_layer, "~");
 
-  calib_hint_layer = text_layer_create(GRect(PBL_IF_RECT_ELSE(8, 0), 40, bounds.size.w-PBL_IF_RECT_ELSE(16, 9), 70));
+  calib_hint_layer = text_layer_create(GRect(PBL_IF_RECT_ELSE(8, 0), 40, bounds.size.w-PBL_IF_RECT_ELSE(16, 0), 70));
   text_layer_set_font(calib_hint_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD));
   text_layer_set_text_color(calib_hint_layer, GColorWhite);
   text_layer_set_background_color(calib_hint_layer, GColorBlack);
   text_layer_set_text_alignment(calib_hint_layer, GTextAlignmentCenter);
   layer_set_hidden(text_layer_get_layer(calib_hint_layer), true);
   layer_add_child(window_layer, text_layer_get_layer(calib_hint_layer));
-  text_layer_set_text(calib_hint_layer, "Calibrating compass. Draw 8 with your wrist.");
+  text_layer_set_text(calib_hint_layer, "Calibrating compass.\nDraw 8 with your wrist.");
 }
 
 static void window_unload(Window *window) {
