@@ -88,6 +88,17 @@ Pebble.addEventListener("appmessage",
         case 'quit':
           navigator.geolocation.clearWatch(locationWatcher);
           break;
+        case 'insert':
+          addLocation({
+            'coords': {
+              'latitude': parseFloat(e.payload.latitude),
+              'longitude': parseFloat(e.payload.longitude)
+            }
+		  }, {
+			  'placeName': e.payload.placename,
+			  'body': e.payload.timelinebody
+		  });
+	      break;
         default:
           console.warn("Unknown command " + e.payload.cmd);
       }
@@ -208,7 +219,7 @@ function locationSuccess(position) {
   calculate();
 }
 
-function addLocation(position) {
+function addLocation(position, extra) {
   var pos = {
     'coords': {
       'latitude': position.coords.latitude,
@@ -217,22 +228,10 @@ function addLocation(position) {
   };
   storeLocation(position);
   if (userToken && (userToken != '-')) {
-    // get address
-    var url = geocoder + '&username=' + userToken + '&lat=' +
-      position.coords.latitude + '&lng=' +
-      position.coords.longitude;
-    var rgc = new XMLHttpRequest(); // xhr for reverse geocoding, only one instance!
-    rgc.open("get", url, true);
-    rgc.setRequestHeader('User-Agent', 'Get Back in Time/2.9');
-    // rgc.setRequestHeader('X-Forwarded-For', userToken);
-    rgc.onerror = rgc.ontimeout = function(e) {
-      console.warn("Reverse geocoding error: " + this.statusText);
-    };
-    rgc.onload = function(res) {
-      var json = this.responseText;
-      // console.log("Got: " + json + " from reverse geocoder");
+
+    function setTimelinePin(placeName) {
       var latlon = Math.round(position.coords.latitude*1000)/1000 + ',' +
-                   Math.round(position.coords.longitude*1000)/1000;
+          Math.round(position.coords.longitude*1000)/1000;
       var now = new Date().toISOString();
       var obj = {
         "position": pos,
@@ -242,26 +241,12 @@ function addLocation(position) {
           "layout": {
             "type": "genericPin",
             "tinyIcon": "system://images/NOTIFICATION_FLAG_TINY",
-            "title": latlon,
+            "title": placeName || latlon,
             "subtitle": "Get Back in Time",
-            "body": "Set from watch."
-          },
+            "body": (extra && extra.body) || "Set from watch."
+          }
         }
       };
-      if (json && (json.substr(0, 1) == '{')) {
-        var gres = JSON.parse(json);
-        if (gres && gres.result && gres.result[0]) {
-          var placeName = gres.result[0].name || '';
-          if (!placeName && gres.result[0].isIn) {
-            placeName = gres.result[0].isIn;
-          }
-          // console.log("Reverse geocoded address: " + placeName);
-          obj.pin.layout.title = placeName;
-        }
-      }
-      else {
-        console.warn("Reverse geocoding error: " + json);
-      }
       // add place to server
       var url = serverAddress + userToken + '/place/new';
       // console.log('Adding place to ' + url + ': ' + JSON.stringify(obj));
@@ -280,9 +265,46 @@ function addLocation(position) {
       req.open("post", url, true);
       req.setRequestHeader('Content-Type', 'application/json');
       req.send(JSON.stringify(obj));
-    };
-    // console.log("Trying to reverse geocode: " + url);
-    rgc.send(null);
+    }
+
+    if(extra && extra.placeName && extra.placeName.length) {
+      setTimelinePin(extra.placeName);
+    } else {
+      // get address
+      var url = geocoder + '&username=' + userToken + '&lat=' +
+          position.coords.latitude + '&lng=' +
+          position.coords.longitude;
+      var rgc = new XMLHttpRequest(); // xhr for reverse geocoding, only one instance!
+      rgc.open("get", url, true);
+      rgc.setRequestHeader('User-Agent', 'Get Back in Time/2.9');
+      // rgc.setRequestHeader('X-Forwarded-For', userToken);
+      rgc.onerror = rgc.ontimeout = function (e) {
+        console.warn("Reverse geocoding error: " + this.statusText);
+      };
+      rgc.onload = function (res) {
+        var json = this.responseText;
+        // console.log("Got: " + json + " from reverse geocoder");
+
+        if (json && (json.substr(0, 1) == '{')) {
+          var gres = JSON.parse(json);
+          if (gres && gres.result && gres.result[0]) {
+            var placeName = gres.result[0].name || '';
+            if (!placeName && gres.result[0].isIn) {
+              placeName = gres.result[0].isIn;
+            }
+            // console.log("Reverse geocoded address: " + placeName);
+            setTimelinePin(placeName);
+          }
+        }
+        else {
+          console.warn("Reverse geocoding error: " + json);
+          setTimelinePin();
+        }
+
+      };
+      // console.log("Trying to reverse geocode: " + url);
+      rgc.send(null);
+    }
   }
 }
 

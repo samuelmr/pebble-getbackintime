@@ -48,6 +48,10 @@ static const uint32_t COUNT_KEY = 10;
 static const uint32_t INDEX_KEY = 11;
 static const uint32_t TITLE_KEY = 12;
 static const uint32_t SUBTITLE_KEY = 13;
+static const uint32_t FORWARD_LATITUDE_KEY = 20;
+static const uint32_t FORWARD_LONGITUDE_KEY = 21;
+static const uint32_t FORWARD_PLACENAME_KEY = 22;
+static const uint32_t FORWARD_SENTFROM_KEY = 23;
 static const char *set_cmd = "set";
 static const char *quit_cmd = "quit";
 static GPath *head_path;
@@ -77,10 +81,11 @@ static int compass_state = CALIBRATING;
 
 static void click_config_provider(void *context);
 
+#define STR_MAX_LEN 30
 typedef struct{
   uint32_t id;
-  char title[30];
-  char subtitle[30];
+  char title[STR_MAX_LEN];
+  char subtitle[STR_MAX_LEN];
 } Place;
 
 Place places[MAX_PLACE_COUNT];
@@ -356,6 +361,29 @@ static void send_message(const char *cmd, int32_t id) {
   app_message_outbox_send();
 }
 
+static void forward_message_to_phone(DictionaryIterator *in) {
+  // The message *in was sent by e.g. the Android app and was meant for the JS app not the watch
+  DictionaryIterator *iter;
+  app_message_outbox_begin(&iter);
+  if (iter == NULL) {
+    APP_LOG(APP_LOG_LEVEL_WARNING, "Can not forward to phone!");
+    hints[4] = "Phone connection failed!";
+    show_hint(4);
+    return;
+  }
+  else {
+    hints[4] = NULL;
+  }
+  #define COPYKEY(X) if(dict_find(in, X)) dict_write_cstring(iter, X, dict_find(in, X)->value->cstring)
+  COPYKEY(CMD_KEY);
+  COPYKEY(FORWARD_LATITUDE_KEY);
+  COPYKEY(FORWARD_LONGITUDE_KEY);
+  COPYKEY(FORWARD_PLACENAME_KEY);
+  COPYKEY(FORWARD_SENTFROM_KEY);
+  dict_write_end(iter);
+  app_message_outbox_send();
+}
+
 static void reset_handler(ClickRecognizerRef recognizer, void *context) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Reset");
   hints[3] = "Resetting target...";
@@ -403,15 +431,22 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     Place *place = &places[place_index];
     Tuple *id_tuple = dict_find(iter, ID_KEY);
     place->id = id_tuple->value->uint32;
+	//FIXME: This may cause crash with Unicode strings - use @bcaller/pebble_unicode in future
     Tuple *title_tuple = dict_find(iter, TITLE_KEY);
-    strcpy(place->title, title_tuple->value->cstring);
+    strncpy(place->title, title_tuple->value->cstring, STR_MAX_LEN-1);
     Tuple *subtitle_tuple = dict_find(iter, SUBTITLE_KEY);
-    strcpy(place->subtitle, subtitle_tuple->value->cstring);
+    strncpy(place->subtitle, subtitle_tuple->value->cstring, STR_MAX_LEN-1);
     if (menu_layer) {
       layer_mark_dirty(menu_layer_get_layer(menu_layer));
     }
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Found place %ld (%d): %s/%s", place->id, place_index, place->title, place->subtitle);
     hints[0] = "SELECT for history menu";
+  }
+	
+  Tuple *tuple_for_phone = dict_find(iter, CMD_KEY);
+  if (tuple_for_phone) {
+	  // This was sent by e.g. the Android app and was meant for the JS app not the watch
+	  forward_message_to_phone(iter);
   }
 
   Tuple *id_tuple = dict_find(iter, ID_KEY);
