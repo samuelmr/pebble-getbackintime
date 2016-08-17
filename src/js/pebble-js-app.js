@@ -88,6 +88,17 @@ Pebble.addEventListener("appmessage",
         case 'quit':
           navigator.geolocation.clearWatch(locationWatcher);
           break;
+        case 'insert':
+          addLocation({
+            'coords': {
+              'latitude': parseFloat(e.payload.latitude),
+              'longitude': parseFloat(e.payload.longitude)
+            }
+          }, {
+            'placeName': e.payload.placename,
+            'body': e.payload.timelinebody
+          });
+          break;
         default:
           console.warn("Unknown command " + e.payload.cmd);
       }
@@ -102,7 +113,8 @@ Pebble.addEventListener("showConfiguration",
       'units': units,
       'interval': interval,
       'sens': sens,
-      'userToken': userToken};
+      'userToken': userToken
+    };
     if (timelineToken) {
       conf.timelineToken = timelineToken;
     }
@@ -130,15 +142,17 @@ Pebble.addEventListener("webviewclosed",
     sens = parseInt(options.sens) || 5;
     localStorage.setItem("sens", sens);
     // console.log("Sentitivity set to: " + sens);
-    var msg = {"units": units,
-               "sens": parseInt(sens)};
+    var msg = {
+      "units": units,
+      "sens": parseInt(sens)
+    };
     messageQueue.push(msg);
     sendNextMessage();
     // console.log('was: ' + lat2 + ', ' + lon2 + ')');
     if (options.chosenPos) {
-     var latlon = options.chosenPos.split(', ');
-     lat2 = parseFloat(latlon[0]);
-     lon2 = parseFloat(latlon[1]);
+      var latlon = options.chosenPos.split(', ');
+      lat2 = parseFloat(latlon[0]);
+      lon2 = parseFloat(latlon[1]);
     }
     // console.log('is: ' + lat2 + ', ' + lon2 + ')');
     calculate();
@@ -208,81 +222,94 @@ function locationSuccess(position) {
   calculate();
 }
 
-function addLocation(position) {
-  var pos = {
-    'coords': {
-      'latitude': position.coords.latitude,
-      'longitude': position.coords.longitude
+function setTimelinePin(coords, placeName, body) {
+  var latlon = Math.round(coords.latitude * 1000) / 1000 + ',' +
+    Math.round(coords.longitude * 1000) / 1000;
+  var obj = {
+    "position": {
+      "coords": coords
+    },
+    "timelineToken": timelineToken,
+    "pin": {
+      "time": new Date().toISOString(),
+      "layout": {
+        "type": "genericPin",
+        "tinyIcon": "system://images/NOTIFICATION_FLAG_TINY",
+        "title": placeName || latlon,
+        "subtitle": "Get Back in Time",
+        "body": body || "Set from watch."
+      }
     }
   };
+  // add place to server
+  var url = serverAddress + userToken + '/place/new';
+  // console.log('Adding place to ' + url + ': ' + JSON.stringify(obj));
+  var req = new XMLHttpRequest();
+  req.onload = function() {
+    var json = this.responseText;
+    // console.log('Got ' + json);
+    if (!json || (json.substr(0, 1) != '{')) {
+      console.warn("Error sending place to server: " + json);
+      return;
+    }
+    //var obj = JSON.parse(json);
+    // console.log("Sent place to server: " + obj._id);
+    getHistoryFromServer();
+  };
+  req.open("post", url, true);
+  req.setRequestHeader('Content-Type', 'application/json');
+  req.send(JSON.stringify(obj));
+}
+
+function reverseGeocode(coords, callback) {
+  // get address
+  var url = geocoder + '&username=' + userToken + '&lat=' +
+    coords.latitude + '&lng=' + coords.longitude;
+  var rgc = new XMLHttpRequest(); // xhr for reverse geocoding, only one instance!
+  rgc.open("get", url, true);
+  rgc.setRequestHeader('User-Agent', 'Get Back in Time/2.9');
+  // rgc.setRequestHeader('X-Forwarded-For', userToken);
+  rgc.onerror = rgc.ontimeout = function(e) {
+    console.warn("Reverse geocoding error: " + this.statusText);
+  };
+  rgc.onload = function(res) {
+    var json = this.responseText;
+    // console.log("Got: " + json + " from reverse geocoder");
+
+    if (json && (json.substr(0, 1) == '{')) {
+      var gres = JSON.parse(json);
+      if (gres && gres.result && gres.result[0]) {
+        var placeName = gres.result[0].name || '';
+        if (!placeName && gres.result[0].isIn) {
+          placeName = gres.result[0].isIn;
+        }
+        // console.log("Reverse geocoded address: " + placeName);
+        callback(placeName);
+      }
+    }
+    else {
+      console.warn("Reverse geocoding error: " + json);
+      callback(null);
+    }
+
+  };
+  // console.log("Trying to reverse geocode: " + url);
+  rgc.send(null);
+}
+
+function addLocation(position, extra) {
+  var coords = {
+    'latitude': position.coords.latitude,
+    'longitude': position.coords.longitude
+  };
   storeLocation(position);
-  if (userToken && (userToken != '-')) {
-    // get address
-    var url = geocoder + '&username=' + userToken + '&lat=' +
-      position.coords.latitude + '&lng=' +
-      position.coords.longitude;
-    var rgc = new XMLHttpRequest(); // xhr for reverse geocoding, only one instance!
-    rgc.open("get", url, true);
-    rgc.setRequestHeader('User-Agent', 'Get Back in Time/2.9');
-    // rgc.setRequestHeader('X-Forwarded-For', userToken);
-    rgc.onerror = rgc.ontimeout = function(e) {
-      console.warn("Reverse geocoding error: " + this.statusText);
-    };
-    rgc.onload = function(res) {
-      var json = this.responseText;
-      // console.log("Got: " + json + " from reverse geocoder");
-      var latlon = Math.round(position.coords.latitude*1000)/1000 + ',' +
-                   Math.round(position.coords.longitude*1000)/1000;
-      var now = new Date().toISOString();
-      var obj = {
-        "position": pos,
-        "timelineToken": timelineToken,
-        "pin": {
-          "time": now,
-          "layout": {
-            "type": "genericPin",
-            "tinyIcon": "system://images/NOTIFICATION_FLAG_TINY",
-            "title": latlon,
-            "subtitle": "Get Back in Time",
-            "body": "Set from watch."
-          },
-        }
-      };
-      if (json && (json.substr(0, 1) == '{')) {
-        var gres = JSON.parse(json);
-        if (gres && gres.result && gres.result[0]) {
-          var placeName = gres.result[0].name || '';
-          if (!placeName && gres.result[0].isIn) {
-            placeName = gres.result[0].isIn;
-          }
-          // console.log("Reverse geocoded address: " + placeName);
-          obj.pin.layout.title = placeName;
-        }
-      }
-      else {
-        console.warn("Reverse geocoding error: " + json);
-      }
-      // add place to server
-      var url = serverAddress + userToken + '/place/new';
-      // console.log('Adding place to ' + url + ': ' + JSON.stringify(obj));
-      var req = new XMLHttpRequest();
-      req.onload = function(res) {
-        var json = this.responseText;
-        // console.log('Got ' + json);
-        if (!json || (json.substr(0, 1) != '{')) {
-          console.warn("Error sending place to server: " + json);
-          return;
-        }
-        var obj = JSON.parse(json);
-        // console.log("Sent place to server: " + obj._id);
-        getHistoryFromServer();
-      };
-      req.open("post", url, true);
-      req.setRequestHeader('Content-Type', 'application/json');
-      req.send(JSON.stringify(obj));
-    };
-    // console.log("Trying to reverse geocode: " + url);
-    rgc.send(null);
+
+  if (extra && extra.placeName && extra.placeName.length) {
+    setTimelinePin(coords, extra.placeName, extra.body);
+  } else {
+    if (userToken && (userToken != '-')) {
+      reverseGeocode(coords, setTimelinePin.bind(null, coords))
+    }
   }
 }
 
@@ -340,13 +367,15 @@ function calculate() {
     var head = Math.round((toDeg(θ)+360) % 360);
 
     if ((dist != prevDist) || (head != prevHead)) {
-      msg = {"dist": dist,
-             "head": head,
-             "accuracy": accuracy,
-             "phonehead": -1,
-             "speed": 0,
-             "units": units,
-             "sens": parseInt(sens)};
+      msg = {
+        "dist": dist,
+        "head": head,
+        "accuracy": accuracy,
+        "phonehead": -1,
+        "speed": 0,
+        "units": units,
+        "sens": parseInt(sens)
+      };
       if ((speed > 0) && (!isNaN(phoneHead)) && (accuracy < 40)) {
         // enough movement and accuracy to calculate speed and heading
         msg.phonehead = phoneHead;
@@ -369,8 +398,10 @@ function locationError(error) {
 
 function storeCurrentPosition() {
   // console.log("Attempting to store current position.");
-  var msg = {"dist": 0,
-             "head": 0};
+  var msg = {
+    "dist": 0,
+    "head": 0
+  };
   messageQueue.push(msg);
   sendNextMessage();
   navigator.geolocation.getCurrentPosition(addLocation, locationError, locationOptions);
@@ -457,11 +488,13 @@ function parseHistory() {
     if ((dStr == '---') && (title == '---')) {
       continue;
     }
-    var msg = {'id': places[i]._id,
-               'index': menuItemCount,
-               'count': ++menuItemCount,
-               'title': dStr,
-               'subtitle': title};
+    var msg = {
+      'id': places[i]._id,
+      'index': menuItemCount,
+      'count': ++menuItemCount,
+      'title': dStr,
+      'subtitle': title
+    };
     messageQueue.push(msg);
   }
   // console.log('Pushed ' + messageQueue.length + ' messages to queue...');
