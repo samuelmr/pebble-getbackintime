@@ -267,7 +267,7 @@ function reverseGeocode(coords, callback) {
     coords.latitude + '&lng=' + coords.longitude;
   var rgc = new XMLHttpRequest(); // xhr for reverse geocoding, only one instance!
   rgc.open("get", url, true);
-  rgc.setRequestHeader('User-Agent', 'Get Back in Time/2.9');
+  rgc.setRequestHeader('User-Agent', 'Get Back in Time/3.19');
   // rgc.setRequestHeader('X-Forwarded-For', userToken);
   rgc.onerror = rgc.ontimeout = function(e) {
     console.warn("Reverse geocoding error: " + this.statusText);
