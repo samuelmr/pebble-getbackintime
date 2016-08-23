@@ -101,7 +101,8 @@ function pushPin(place, res) {
           "type": "genericNotification",
           "title": pin.layout.title || "Get Back target",
           "tinyIcon": "system://images/NOTIFICATION_FLAG",
-          "body": "A new target added from watch."
+          "body": pin.layout.body || "New target added.";
+
         }
       }
     );
