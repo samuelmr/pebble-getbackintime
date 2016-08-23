@@ -95,17 +95,14 @@ function pushPin(place, res) {
     launchCode: parseInt(place._id)
   }));
   if (!place.pin || !place.pin.createNotification) {
-    pin.createNotification = new Timeline.Pin.Notification(
-      {
-        "layout": {
-          "type": "genericNotification",
-          "title": pin.layout.title || "Get Back target",
-          "tinyIcon": "system://images/NOTIFICATION_FLAG",
-          "body": pin.layout.body || "New target added.";
-
-        }
+    pin.createNotification = new Timeline.Pin.Notification({
+      "layout": {
+        "type": "genericNotification",
+        "title": pin.layout.title || "Get Back target",
+        "tinyIcon": "system://images/NOTIFICATION_FLAG",
+        "body": pin.layout.body || "New target added."
       }
-    );
+    });
   }
   place.pin = pin;
   console.log(place);
