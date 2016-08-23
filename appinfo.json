@@ -41,11 +41,10 @@
         "aplite",
         "basalt",
         "chalk",
-        "diorite",
-        "emery"
+        "diorite"
     ],
     "uuid": "6f983a89-f645-4a11-aefd-3b84dd8946f0",
-    "versionLabel": "3.18",
+    "versionLabel": "3.19",
     "watchapp": {
         "watchface": false
     }
