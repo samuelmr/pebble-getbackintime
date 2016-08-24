@@ -1,0 +1,61 @@
+{
+  "version": "3.19.0",
+  "author": "Samuel Rinnetm\u00e4ki",
+  "private": true,
+  "dependencies": {},
+  "keywords": [
+    "pebble-app"
+  ],
+  "pebble": {
+    "sdkVersion": "3",
+    "resources": {
+      "media": [
+        {
+          "menuIcon": true,
+          "type": "png",
+          "name": "LOGO",
+          "file": "images/icon28.png"
+        }
+      ]
+    },
+    "projectType": "native",
+    "uuid": "6f983a89-f645-4a11-aefd-3b84dd8946f0",
+    "messageKeys": {
+      "count": 10,
+      "index": 11,
+      "head": 2,
+      "dist": 3,
+      "subtitle": 13,
+      "placename": 22,
+      "title": 12,
+      "cmd": 1,
+      "longitude": 21,
+      "units": 4,
+      "phonehead": 9,
+      "timelinebody": 23,
+      "latitude": 20,
+      "sens": 5,
+      "speed": 7,
+      "id": 6,
+      "accuracy": 8
+    },
+    "enableMultiJS": false,
+    "displayName": "Get Back in Time",
+    "watchapp": {
+      "onlyShownOnCommunication": false,
+      "hiddenApp": false,
+      "watchface": false
+    },
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "chalk",
+      "diorite"
+    ],
+    "capabilities": [
+      "location",
+      "configurable"
+    ]
+  },
+  "name": "Back in Time"
+}
