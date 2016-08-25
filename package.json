@@ -1,5 +1,5 @@
 {
-  "version": "3.19.0",
+  "version": "3.20.0",
   "author": "Samuel Rinnetm\u00e4ki",
   "private": true,
   "dependencies": {},
@@ -13,8 +13,30 @@
         {
           "menuIcon": true,
           "type": "png",
+          "name": "LOGO_TINY",
+          "file": "images/icon25.png"
+        },
+        {
+          "type": "png",
+          "name": "LOGO_SMALL",
+          "file": "images/icon50.png"
+        },
+        {
+          "type": "png",
+          "name": "LOGO_LARGE",
+          "file": "images/icon80.png"
+        }
+      ],
+      "publishedMedia": [
+        {
+          "id": 1,
           "name": "LOGO",
-          "file": "images/icon28.png"
+          "glance": "LOGO_TINY",
+          "timeline": {
+            "tiny": "LOGO_TINY",
+            "small": "LOGO_SMALL",
+            "large": "LOGO_LARGE"
+          }
         }
       ]
     },
