@@ -1,83 +1,68 @@
 {
-  "version": "3.20.0",
-  "author": "Samuel Rinnetm\u00e4ki",
-  "private": true,
-  "dependencies": {},
-  "keywords": [
-    "pebble-app"
-  ],
-  "pebble": {
-    "sdkVersion": "3",
-    "resources": {
-      "media": [
-        {
-          "menuIcon": true,
-          "type": "png",
-          "name": "LOGO_TINY",
-          "file": "images/icon25.png"
-        },
-        {
-          "type": "png",
-          "name": "LOGO_SMALL",
-          "file": "images/icon50.png"
-        },
-        {
-          "type": "png",
-          "name": "LOGO_LARGE",
-          "file": "images/icon80.png"
-        }
-      ],
-      "publishedMedia": [
-        {
-          "id": 1,
-          "name": "LOGO",
-          "glance": "LOGO_TINY",
-          "timeline": {
-            "tiny": "LOGO_TINY",
-            "small": "LOGO_SMALL",
-            "large": "LOGO_LARGE"
-          }
-        }
-      ]
-    },
-    "projectType": "native",
-    "uuid": "6f983a89-f645-4a11-aefd-3b84dd8946f0",
-    "messageKeys": {
-      "count": 10,
-      "index": 11,
-      "head": 2,
-      "dist": 3,
-      "subtitle": 13,
-      "placename": 22,
-      "title": 12,
-      "cmd": 1,
-      "longitude": 21,
-      "units": 4,
-      "phonehead": 9,
-      "timelinebody": 23,
-      "latitude": 20,
-      "sens": 5,
-      "speed": 7,
-      "id": 6,
-      "accuracy": 8
-    },
-    "enableMultiJS": false,
-    "displayName": "Get Back in Time",
-    "watchapp": {
-      "onlyShownOnCommunication": false,
-      "hiddenApp": false,
-      "watchface": false
-    },
-    "targetPlatforms": [
-      "aplite",
-      "basalt",
-      "chalk",
-      "diorite"
+    "author": "Samuel Rinnetm\u00e4ki",
+    "dependencies": {},
+    "keywords": [
+        "pebble-app"
     ],
-    "capabilities": [
-      "location",
-      "configurable"
-    ]
-  },
-  "name": "Back in Time"
+    "name": "back-in-time",
+    "pebble": {
+        "capabilities": [
+            "location",
+            "configurable"
+        ],
+        "displayName": "Get Back in Time",
+        "enableMultiJS": true,
+        "messageKeys": {
+            "accuracy": 8,
+            "cmd": 1,
+            "count": 10,
+            "dist": 3,
+            "head": 2,
+            "id": 6,
+            "index": 11,
+            "latitude": 20,
+            "longitude": 21,
+            "phonehead": 9,
+            "placename": 22,
+            "sens": 5,
+            "speed": 7,
+            "subtitle": 13,
+            "timelinebody": 23,
+            "title": 12,
+            "units": 4
+        },
+        "projectType": "native",
+        "resources": {
+            "media": [
+                {
+                    "file": "images/icon25.png",
+                    "menuIcon": true,
+                    "name": "LOGO_TINY",
+                    "type": "png"
+                },
+                {
+                    "file": "images/icon50.png",
+                    "name": "LOGO_SMALL",
+                    "type": "png"
+                },
+                {
+                    "file": "images/icon80.png",
+                    "name": "LOGO_LARGE",
+                    "type": "png"
+                }
+            ]
+        },
+        "sdkVersion": "3",
+        "targetPlatforms": [
+            "aplite",
+            "basalt",
+            "chalk",
+            "diorite"
+        ],
+        "uuid": "6f983a89-f645-4a11-aefd-3b84dd8946f0",
+        "watchapp": {
+            "watchface": false
+        }
+    },
+    "version": "3.20.0"
 }

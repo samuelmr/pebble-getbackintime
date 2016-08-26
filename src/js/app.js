@@ -16,8 +16,6 @@ var accuracy = 0;
 var phoneHead = 0;
 var prevHead = 0;
 var prevDist = 0;
-var head = 0;
-var dist = 0;
 var R = 6371000; // m
 var locationWatcher;
 var locationInterval;
@@ -165,7 +163,7 @@ function sendNextMessage() {
   var now = new Date().getTime();
   var processed_time = now - processing;
   if (processing && (processed_time > TTL)) {
-    console.warn('Message was processed more than ' + TTL + ' milliseconds (' + processed_time + '). Aborting.')
+    console.warn('Message was processed more than ' + TTL + ' milliseconds (' + processed_time + '). Aborting.');
     messageQueue.shift();
     processing = 0;
   }
@@ -243,7 +241,7 @@ function setTimelinePin(coords, placeName, body) {
   };
   // add place to server
   var url = serverAddress + userToken + '/place/new';
-  // console.log('Adding place to ' + url + ': ' + JSON.stringify(obj));
+  console.log('Adding place to ' + url + ': ' + JSON.stringify(obj));
   var req = new XMLHttpRequest();
   req.onload = function() {
     var json = this.responseText;
@@ -259,6 +257,30 @@ function setTimelinePin(coords, placeName, body) {
   req.open("post", url, true);
   req.setRequestHeader('Content-Type', 'application/json');
   req.send(JSON.stringify(obj));
+  
+  // side effect of pushing timeline pin: also update appGlance
+  var sliceObj = {
+    "layout": {
+      "icon": "app://images/LOGO_TINY",
+      "subtitleTemplateString": obj.pin.layout.title
+    }
+  };
+  setSlice(sliceObj);
+
+}
+
+function setSlice(obj) {
+  if (Pebble.appGlanceReload) {
+    Pebble.appGlanceReload([obj], appGlanceSuccess, appGlanceFailure);    
+  }
+}
+
+function appGlanceSuccess(appGlanceSlices, appGlanceReloadResult) {
+  console.log('appGlance updated!');
+}
+
+function appGlanceFailure(appGlanceSlices, appGlanceReloadResult) {
+  console.error('appGlance update FAILED!');
 }
 
 function reverseGeocode(coords, callback) {
@@ -267,8 +289,7 @@ function reverseGeocode(coords, callback) {
     coords.latitude + '&lng=' + coords.longitude;
   var rgc = new XMLHttpRequest(); // xhr for reverse geocoding, only one instance!
   rgc.open("get", url, true);
-  rgc.setRequestHeader('User-Agent', 'Get Back in Time/3.19');
-  // rgc.setRequestHeader('X-Forwarded-For', userToken);
+  rgc.setRequestHeader('User-Agent', 'Get Back in Time/3.21/' + userToken);
   rgc.onerror = rgc.ontimeout = function(e) {
     console.warn("Reverse geocoding error: " + this.statusText);
   };
@@ -308,7 +329,7 @@ function addLocation(position, extra) {
     setTimelinePin(coords, extra.placeName, extra.body);
   } else {
     if (userToken && (userToken != '-')) {
-      reverseGeocode(coords, setTimelinePin.bind(null, coords))
+      reverseGeocode(coords, setTimelinePin.bind(null, coords));
     }
   }
 }
@@ -340,24 +361,12 @@ function calculate() {
     var φ2 = toRad(lat2);
     var Δφ = toRad(lat2-lat1);
     var Δλ = toRad(lon2-lon1);
-    /*
-    var φ1 = toRad(lat1),  λ1 = toRad(lon1);
-    var φ2 = toRad(lon1), λ2 = toRad(lon2);
-    var Δφ = φ2 - φ1;
-    var Δλ = λ2 - λ1;
-    */
+
     var a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
             Math.cos(φ1) * Math.cos(φ2) *
             Math.sin(Δλ/2) * Math.sin(Δλ/2);
     var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     var dist = Math.round(R * c);
-
-/*
-    var y = Math.sin(λ2-λ1) * Math.cos(φ2);
-    var x = Math.cos(φ1)*Math.sin(φ2) -
-            Math.sin(φ1)*Math.cos(φ2)*Math.cos(λ2-λ1);
-    var head = Math.round(toDeg(Math.atan2(y, x)));
-*/
 
     var y = Math.sin(Δλ) * Math.cos(φ2);
     var x = Math.cos(φ1)*Math.sin(φ2) -
