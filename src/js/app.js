@@ -30,6 +30,7 @@ var processing = 0;
 var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 Pebble.addEventListener("ready", function(e) {
+  console.log('JS ready');
   userToken = Pebble.getAccountToken() || "-";
   localStorage.setItem("userToken", userToken);
   if ((lat2 === null) || (lon2 === null)) {
@@ -257,7 +258,8 @@ function setTimelinePin(coords, placeName, body) {
   req.open("post", url, true);
   req.setRequestHeader('Content-Type', 'application/json');
   req.send(JSON.stringify(obj));
-  
+
+/*
   // side effect of pushing timeline pin: also update appGlance
   var sliceObj = {
     "layout": {
@@ -266,12 +268,14 @@ function setTimelinePin(coords, placeName, body) {
     }
   };
   setSlice(sliceObj);
+*/
 
 }
 
+/*
 function setSlice(obj) {
   if (Pebble.appGlanceReload) {
-    Pebble.appGlanceReload([obj], appGlanceSuccess, appGlanceFailure);    
+    Pebble.appGlanceReload([obj], appGlanceSuccess, appGlanceFailure);
   }
 }
 
@@ -283,6 +287,7 @@ function appGlanceFailure(appGlanceSlices, appGlanceReloadResult) {
   console.error('appGlance update FAILED!');
 }
 
+*/
 function reverseGeocode(coords, callback) {
   // get address
   var url = geocoder + '&username=' + userToken + '&lat=' +
@@ -513,6 +518,7 @@ function parseHistory() {
 function startWatcher() {
   if (locationInterval) {
     clearInterval(locationInterval);
+    locationInterval = null;
   }
   if (locationWatcher) {
     navigator.geolocation.clearWatch(locationWatcher);
