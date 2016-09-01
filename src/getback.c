@@ -145,6 +145,7 @@ static void reset_dist_bg(void *data) {
 }
 
 static void show_hint(int index) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing hint");
   // APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing hint: %d", index);
   if (!initialized) {
     text_layer_set_text(hint_layer, "Loading data...");
@@ -165,6 +166,7 @@ static void show_hint(int index) {
 }
 
 static void prev_hint_handler(ClickRecognizerRef recognizer, void *context) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing prev hint");
   current_hint--;
   if (current_hint < 0) {
     current_hint = MAX_HINT_COUNT - 1;
@@ -178,6 +180,7 @@ static void prev_hint_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void next_hint_handler(ClickRecognizerRef recognizer, void *context) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing next hint");
   ++current_hint;
   if (current_hint >= MAX_HINT_COUNT) {
     current_hint = 0;
@@ -192,6 +195,7 @@ static void next_hint_handler(ClickRecognizerRef recognizer, void *context) {
 
 #ifdef PBL_COMPASS
 void compass_heading_handler(CompassHeadingData heading_data){
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Compass heading updated");
   switch (heading_data.compass_status) {
     case CompassStatusDataInvalid:
       compass_state = CALIBRATING;
@@ -234,6 +238,7 @@ void compass_heading_handler(CompassHeadingData heading_data){
 #endif
 
 static void info_layer_update_callback(Layer *layer, GContext *ctx) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Updating info layer");
   if(!bluetooth_connection_service_peek()) {
     text_layer_set_text(track_layer, "!");
     text_layer_set_text(speed_layer, "!");
@@ -289,6 +294,7 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
 }
 
 static void head_layer_update_callback(Layer *layer, GContext *ctx) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Updating head layer");
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_context_set_stroke_color(ctx, GColorBlack);
   graphics_context_set_stroke_width(ctx, 4);
@@ -360,6 +366,7 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
 }
 
 static void send_message(const char *cmd, int32_t id) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Sending...");
   DictionaryIterator *iter;
   app_message_outbox_begin(&iter);
   if (iter == NULL) {
@@ -378,6 +385,7 @@ static void send_message(const char *cmd, int32_t id) {
 }
 
 static void forward_message_to_phone(DictionaryIterator *in) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "forwarding...");
   // The message *in was sent by e.g. the Android app and was meant for the JS app not the watch
   DictionaryIterator *iter;
   app_message_outbox_begin(&iter);
@@ -434,6 +442,7 @@ void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, voi
 }
 
 void in_received_handler(DictionaryIterator *iter, void *context) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "received data");
   hints[4] = NULL;
   Tuple *count_tuple = dict_find(iter, COUNT_KEY);
   if (count_tuple) {
@@ -458,7 +467,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Found place %ld (%d): %s/%s", place->id, place_index, place->title, place->subtitle);
     hints[0] = "SELECT for history menu";
   }
-	
+
   Tuple *tuple_for_phone = dict_find(iter, CMD_KEY);
   if (tuple_for_phone) {
 	  // This was sent by e.g. the Android app and was meant for the JS app not the watch
@@ -558,6 +567,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   if (dist_tuple) {
     if (current_timer) {
       app_timer_cancel(current_timer);
+      current_timer = NULL;
     }
     if (dist_tuple->value->int32 > distance) {
       text_layer_set_background_color(dist_layer, receding);
