@@ -1,0 +1,83 @@
+{
+  "version": "3.21.0",
+  "author": "Samuel Rinnetmaki",
+  "private": true,
+  "dependencies": {},
+  "keywords": [
+    "pebble-app"
+  ],
+  "pebble": {
+    "sdkVersion": "4",
+    "resources": {
+      "media": [
+        {
+          "menuIcon": true,
+          "type": "bitmap",
+          "name": "LOGO_TINY",
+          "file": "images/menuicon25.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "LOGO_SMALL",
+          "file": "images/menuicon50.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "LOGO_LARGE",
+          "file": "images/menuicon80.png"
+        }
+      ],
+      "publishedMedia": [
+        {
+          "id": 1,
+          "name": "LOGO",
+          "glance": "WEATHER_HOT_ICON_TINY",
+          "timeline": {
+            "tiny": "WEATHER_HOT_ICON_TINY",
+            "small": "WEATHER_HOT_ICON_SMALL",
+            "large": "WEATHER_HOT_ICON_LARGE"
+          }
+        }
+      ]
+    },
+    "projectType": "native",
+    "uuid": "6f983a89-f645-4a11-aefd-3b84dd8946f0",
+    "messageKeys": {
+      "cmd": 1,
+      "head": 2,
+      "dist": 3,
+      "units": 4,
+      "sens": 5,
+      "id": 6,
+      "speed": 7,
+      "accuracy": 8,
+      "phonehead": 9,
+      "count": 10,
+      "index": 11,
+      "title": 12,
+      "subtitle": 13,
+      "latitude": 20,
+      "longitude": 21,
+      "placename": 22,
+      "timelinebody": 23
+    },
+    "enableMultiJS": false,
+    "displayName": "Get Back in Time",
+    "watchapp": {
+      "onlyShownOnCommunication": false,
+      "hiddenApp": false,
+      "watchface": false
+    },
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "chalk",
+      "diorite"
+    ],
+    "capabilities": [
+      "location",
+      "configurable"
+    ]
+  },
+  "name": "Back in Time"
+}
