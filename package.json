@@ -78,5 +78,6 @@
             "watchface": false
         }
     },
+    "private": true,
     "version": "3.22.0"
 }
