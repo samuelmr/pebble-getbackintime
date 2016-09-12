@@ -72,12 +72,14 @@ static GColor receding;
 // static GColor bg;
 static int max_radius;
 
+#ifdef PBL_COMPASS
 enum compass_states {
   CALIBRATING = 0,
   FINETUNING = 1,
   CALIBRATED = 2
 };
 static int compass_state = CALIBRATING;
+#endif
 
 static void click_config_provider(void *context);
 
@@ -143,6 +145,7 @@ static void reset_dist_bg(void *data) {
 }
 
 static void show_hint(int index) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing hint");
   // APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing hint: %d", index);
   if (!initialized) {
     text_layer_set_text(hint_layer, "Loading data...");
@@ -163,6 +166,7 @@ static void show_hint(int index) {
 }
 
 static void prev_hint_handler(ClickRecognizerRef recognizer, void *context) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing prev hint");
   current_hint--;
   if (current_hint < 0) {
     current_hint = MAX_HINT_COUNT - 1;
@@ -176,6 +180,7 @@ static void prev_hint_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void next_hint_handler(ClickRecognizerRef recognizer, void *context) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing next hint");
   ++current_hint;
   if (current_hint >= MAX_HINT_COUNT) {
     current_hint = 0;
@@ -188,7 +193,9 @@ static void next_hint_handler(ClickRecognizerRef recognizer, void *context) {
   }
 }
 
+#ifdef PBL_COMPASS
 void compass_heading_handler(CompassHeadingData heading_data){
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Compass heading updated");
   switch (heading_data.compass_status) {
     case CompassStatusDataInvalid:
       compass_state = CALIBRATING;
@@ -227,18 +234,11 @@ void compass_heading_handler(CompassHeadingData heading_data){
     layer_mark_dirty(head_layer);
     layer_mark_dirty(info_layer);
   }
-
-/* this might be too confusing... perhaps make it optional some day?
-  if (pheading >= 0) {
-    orientation = pheading%360;
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Orientation from phone heading: %d° (%d)", orientation, pheading);
-  }
-  layer_mark_dirty(head_layer);
-  layer_mark_dirty(info_layer);
-*/
 }
+#endif
 
 static void info_layer_update_callback(Layer *layer, GContext *ctx) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Updating info layer");
   if(!bluetooth_connection_service_peek()) {
     text_layer_set_text(track_layer, "!");
     text_layer_set_text(speed_layer, "!");
@@ -294,11 +294,10 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
 }
 
 static void head_layer_update_callback(Layer *layer, GContext *ctx) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Updating head layer");
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_context_set_stroke_color(ctx, GColorBlack);
-#ifdef PBL_SDK_3
   graphics_context_set_stroke_width(ctx, 4);
-#endif
   if (distance <= accuracy) {
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance (%ld) less than accuracy (%d) - drawing circle", distance, accuracy);
     layer_set_hidden(text_layer_get_layer(target_layer), true);
@@ -312,6 +311,7 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
     }
     graphics_fill_circle(ctx, needle_axis, radius);
   }
+#ifdef PBL_COMPASS
   else if (compass_state == CALIBRATING) {
     layer_set_hidden(text_layer_get_layer(target_layer), true);
     layer_set_hidden(text_layer_get_layer(target2_layer), true);
@@ -340,10 +340,33 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
       gpath_draw_outline(ctx, head_path);
     }
   }
+#else
+  else {
+    if (pheading >= 0) {
+      layer_set_hidden(text_layer_get_layer(target_layer), false);
+      layer_set_hidden(text_layer_get_layer(target2_layer), false);
+      layer_set_hidden(head_layer, false);
+      layer_set_hidden(text_layer_get_layer(calib_hint_layer), true);
+      orientation = pheading%360;
+      int compass_heading = (TRIG_MAX_ANGLE / 360) * (heading - orientation);
+      gpath_rotate_to(head_path, compass_heading);
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Orientation from phone heading: %d° (%d)", orientation, pheading);
+      gpath_draw_filled(ctx, head_path);
+    }
+    else {
+      layer_set_hidden(text_layer_get_layer(target_layer), true);
+      layer_set_hidden(text_layer_get_layer(target2_layer), true);
+      layer_set_hidden(head_layer, true);
+      layer_set_hidden(text_layer_get_layer(calib_hint_layer), false);
+      text_layer_set_text(calib_hint_layer, "Move to get heading.");
+    }
+  }
+#endif
   // APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance: %d, orientation %d, heading %d, phone heading %d, compass heading %d", (int) distance, orientation, heading, pheading, (heading - orientation));
 }
 
 static void send_message(const char *cmd, int32_t id) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Sending...");
   DictionaryIterator *iter;
   app_message_outbox_begin(&iter);
   if (iter == NULL) {
@@ -362,6 +385,7 @@ static void send_message(const char *cmd, int32_t id) {
 }
 
 static void forward_message_to_phone(DictionaryIterator *in) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "forwarding...");
   // The message *in was sent by e.g. the Android app and was meant for the JS app not the watch
   DictionaryIterator *iter;
   app_message_outbox_begin(&iter);
@@ -418,6 +442,7 @@ void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, voi
 }
 
 void in_received_handler(DictionaryIterator *iter, void *context) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "received data");
   hints[4] = NULL;
   Tuple *count_tuple = dict_find(iter, COUNT_KEY);
   if (count_tuple) {
@@ -431,7 +456,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     Place *place = &places[place_index];
     Tuple *id_tuple = dict_find(iter, ID_KEY);
     place->id = id_tuple->value->uint32;
-	//FIXME: This may cause crash with Unicode strings - use @bcaller/pebble_unicode in future
+	  //FIXME: This may cause crash with Unicode strings - use @bcaller/pebble_unicode in future
     Tuple *title_tuple = dict_find(iter, TITLE_KEY);
     strncpy(place->title, title_tuple->value->cstring, STR_MAX_LEN-1);
     Tuple *subtitle_tuple = dict_find(iter, SUBTITLE_KEY);
@@ -451,8 +476,6 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
 
   Tuple *id_tuple = dict_find(iter, ID_KEY);
   if (id_tuple) {
-// what's the best way to find out if launch_get_args is supported?
-#ifdef PBL_PLATFORM_BASALT
     int32_t idval = id_tuple->value->int32;
     if ((idval < 0) && (launch_reason() == APP_LAUNCH_TIMELINE_ACTION)) {
       uint32_t id = launch_get_args();
@@ -461,7 +484,6 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
       hints[3] = "Getting target information...";
       show_hint(3);
     }
-#endif
     initialized = true;
   }
   static char units[9];
@@ -545,6 +567,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   if (dist_tuple) {
     if (current_timer) {
       app_timer_cancel(current_timer);
+      current_timer = NULL;
     }
     if (dist_tuple->value->int32 > distance) {
       text_layer_set_background_color(dist_layer, receding);
@@ -580,7 +603,6 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
       unit = "mi";
     }
     else if (strcmp(units, "nautical") == 0) {
-      dist_times_ten = dist_times_ten;
       unit = "nm";
     }
     else {
@@ -598,6 +620,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     snprintf(dist_text, sizeof(dist_text), "%d %s", (int) (dist_times_ten/10), unit);
   }
   // APP_LOG(APP_LOG_LEVEL_DEBUG, "Unit: %s", unit);
+#ifdef PBL_COMPASS
   Tuple *sens_tuple = dict_find(iter, SENS_KEY);
   if (sens_tuple) {
     sensitivity = sens_tuple->value->int8;
@@ -606,6 +629,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     compass_service_subscribe(&compass_heading_handler);
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Sensitivity: %d", sensitivity);
   }
+#endif
 
   text_layer_set_text(dist_layer, dist_text);
   show_hint(0);
@@ -775,7 +799,11 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(calib_hint_layer, GTextAlignmentCenter);
   layer_set_hidden(text_layer_get_layer(calib_hint_layer), true);
   layer_add_child(window_layer, text_layer_get_layer(calib_hint_layer));
-  text_layer_set_text(calib_hint_layer, "Calibrating compass.\nDraw 8 with your wrist.");
+#ifdef PBL_COMPASS
+  text_layer_set_text(calib_hint_layer, "Calibrating compass.\nDraw 8 with wrist.");
+#else
+  text_layer_set_text(calib_hint_layer, "Move to get heading.");
+#endif
 }
 
 static void window_unload(Window *window) {
@@ -834,8 +862,10 @@ static void init(void) {
   strcpy(place->subtitle, "Set current location");
   history_count = 1;
 
+#ifdef PBL_COMPASS
   compass_service_set_heading_filter(TRIG_MAX_ANGLE*sensitivity/360);
   compass_service_subscribe(&compass_heading_handler);
+#endif
   app_message_register_inbox_received(in_received_handler);
   app_message_register_inbox_dropped(in_dropped_handler);
   app_message_register_outbox_sent(out_sent_handler);
@@ -864,7 +894,9 @@ static void init(void) {
 }
 
 static void deinit(void) {
+#ifdef PBL_COMPASS
   compass_service_unsubscribe();
+#endif
   send_message(quit_cmd, -1);
   window_destroy(window);
 }
