@@ -7,7 +7,7 @@
     "pebble-app"
   ],
   "pebble": {
-    "sdkVersion": "4",
+    "sdkVersion": "3",
     "resources": {
       "media": [
         {
@@ -31,11 +31,11 @@
         {
           "id": 1,
           "name": "LOGO",
-          "glance": "WEATHER_HOT_ICON_TINY",
+          "glance": "LOGO_TINY",
           "timeline": {
-            "tiny": "WEATHER_HOT_ICON_TINY",
-            "small": "WEATHER_HOT_ICON_SMALL",
-            "large": "WEATHER_HOT_ICON_LARGE"
+            "tiny": "LOGO_TINY",
+            "small": "LOGO_SMALL",
+            "large": "LOGO_LARGE"
           }
         }
       ]
