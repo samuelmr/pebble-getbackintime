@@ -385,7 +385,7 @@ static void forward_message_to_phone(DictionaryIterator *in) {
 }
 
 static void reset_handler(ClickRecognizerRef recognizer, void *context) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Reset");
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Reset");
   hints[3] = "Resetting target...";
   show_hint(3);
   text_layer_set_text(dist_layer, "0");
@@ -394,7 +394,7 @@ static void reset_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void menu_show_handler(ClickRecognizerRef recognizer, void *context) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Show menu, %d items!", history_count);
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Show menu, %d items!", history_count);
   window_stack_push(menu_window, animated);
 }
 
@@ -442,7 +442,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Found place %ld (%d): %s/%s", place->id, place_index, place->title, place->subtitle);
     hints[0] = "SELECT for history menu";
   }
-	
+
   Tuple *tuple_for_phone = dict_find(iter, CMD_KEY);
   if (tuple_for_phone) {
 	  // This was sent by e.g. the Android app and was meant for the JS app not the watch
@@ -504,7 +504,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     }
     text_layer_set_text(target_layer, target_text);
     text_layer_set_text(target2_layer, target2_text);
-    layer_mark_dirty(head_layer);
+    // layer_mark_dirty(head_layer);
     layer_mark_dirty(info_layer);
   }
   Tuple *units_tuple = dict_find(iter, UNITS_KEY);
