@@ -259,7 +259,29 @@ function setTimelinePin(coords, placeName, body) {
   req.open("post", url, true);
   req.setRequestHeader('Content-Type', 'application/json');
   req.send(JSON.stringify(obj));
+  // kind of a side effect...
+  addAppGlanceSlice(obj);
 }
+
+function addAppGlanceSlice(obj) {
+  // Construct the app glance slice object
+  var appGlanceSlices = [{
+    "layout": {
+      "icon": "app://images/LOGO",
+      "subtitleTemplateString": obj.pin.layout.title
+    }
+  }];
+  // Trigger a reload of the slices in the app glance
+  Pebble.appGlanceReload(appGlanceSlices, appGlanceSuccess, appGlanceFailure);
+}
+
+function appGlanceSuccess(appGlanceSlices, appGlanceReloadResult) {
+  console.log('App glance creation OK!');
+};
+
+function appGlanceFailure(appGlanceSlices, appGlanceReloadResult) {
+  console.error('App glance creation FAILED: ' + JSON.stringify(appGlanceReloadResult));
+};
 
 function reverseGeocode(coords, callback) {
   // get address
