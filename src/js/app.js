@@ -29,6 +29,8 @@ var errorCount = 0;
 var processing = 0;
 var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+console.log('Initial values: lat2: ' + lat2 + ', lon2: ' + lon2 + ', interval:' + interval + ', units: ' + units + ', userToken: ' + userToken);
+
 Pebble.addEventListener("ready", function(e) {
   console.log('JS ready');
   userToken = Pebble.getAccountToken() || "-";
@@ -68,15 +70,15 @@ Pebble.addEventListener("ready", function(e) {
 Pebble.addEventListener("appmessage",
   function(e) {
     if (e && e.payload && e.payload.cmd) {
-      // console.log("Got command: " + e.payload.cmd + ' (' + e.payload.id + ')');
+      console.log("Got command: " + e.payload.cmd + ' (' + e.payload.id + ')');
       switch (e.payload.cmd) {
         case 'set':
           if (!e.payload.id || (e.payload.id < 0)) {
-            // console.log('Setting new target (' + e.payload.id + ')');
+            console.log('Setting new target (' + e.payload.id + ')');
             storeCurrentPosition();
           }
           else {
-            // console.log('Getting data for place ' + e.payload.id);
+            console.log('Getting data for place ' + e.payload.id);
             getPositionFromServer(e.payload.id);
           }
           break;
@@ -85,7 +87,10 @@ Pebble.addEventListener("appmessage",
           lon2 = null;
           break;
         case 'quit':
-          navigator.geolocation.clearWatch(locationWatcher);
+          console.log('Quit, disabling watcher');
+          if (locationWatcher) {
+            navigator.geolocation.clearWatch(locationWatcher);
+          }
           break;
         case 'insert':
           addLocation({
@@ -152,10 +157,10 @@ Pebble.addEventListener("webviewclosed",
       var latlon = options.chosenPos.split(', ');
       lat2 = parseFloat(latlon[0]);
       lon2 = parseFloat(latlon[1]);
+      startWatcher();
     }
     // console.log('is: ' + lat2 + ', ' + lon2 + ')');
     calculate();
-    startWatcher();
     getHistoryFromServer();
   }
 );
@@ -165,7 +170,8 @@ function sendNextMessage() {
   var processed_time = now - processing;
   if (processing && (processed_time > TTL)) {
     console.warn('Message was processed more than ' + TTL + ' milliseconds (' + processed_time + '). Aborting.');
-    messageQueue.shift();
+    // messageQueue.shift();
+    messageQueue = [];
     processing = 0;
   }
   else if (processing) {
@@ -233,7 +239,9 @@ function setTimelinePin(coords, placeName, body) {
       "time": new Date().toISOString(),
       "layout": {
         "type": "genericPin",
-        "tinyIcon": "system://images/NOTIFICATION_FLAG_TINY",
+        "tinyIcon": "app://images/LOGO_TINY",
+        "smallIcon": "app://images/LOGO_SMALL",
+        "largeIcon": "app://images/LOGO_LARGE",
         "title": placeName || latlon,
         "subtitle": "Get Back in Time",
         "body": body || "Set from watch."
@@ -266,7 +274,7 @@ function addAppGlanceSlice(obj) {
   // Construct the app glance slice object
   var appGlanceSlices = [{
     "layout": {
-      "icon": "app://images/LOGO",
+      "icon": "app://images/LOGO_TINY",
       "subtitleTemplateString": obj.pin.layout.title
     }
   }];
@@ -288,7 +296,7 @@ function reverseGeocode(coords, callback) {
     coords.latitude + '&lng=' + coords.longitude;
   var rgc = new XMLHttpRequest(); // xhr for reverse geocoding, only one instance!
   rgc.open("get", url, true);
-  rgc.setRequestHeader('User-Agent', 'Get Back in Time/3.21/' + userToken);
+  // rgc.setRequestHeader('User-Agent', 'Get Back in Time/3.21/' + userToken);
   rgc.onerror = rgc.ontimeout = function(e) {
     console.warn("Reverse geocoding error: " + this.statusText);
   };
@@ -516,6 +524,7 @@ function startWatcher() {
   }
   if (locationWatcher) {
     navigator.geolocation.clearWatch(locationWatcher);
+    locationWatcher = null;
   }
   if (interval > 0) {
     // console.log('Interval is ' + interval + ', using getCurrentPosition and setInterval');
