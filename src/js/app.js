@@ -62,7 +62,7 @@ Pebble.addEventListener("ready", function(e) {
   sendNextMessage();
   getHistoryFromServer();
   initialized = true;
-  // console.log("JavaScript app ready and running!");
+  console.log("JavaScript app ready and running!");
 });
 
 Pebble.addEventListener("appmessage",
@@ -233,7 +233,7 @@ function setTimelinePin(coords, placeName, body) {
       "time": new Date().toISOString(),
       "layout": {
         "type": "genericPin",
-        "tinyIcon": "system://images/NOTIFICATION_FLAG_TINY",
+        "tinyIcon": "app://images/LOGO_TINY",
         "title": placeName || latlon,
         "subtitle": "Get Back in Time",
         "body": body || "Set from watch."
@@ -259,42 +259,39 @@ function setTimelinePin(coords, placeName, body) {
   req.setRequestHeader('Content-Type', 'application/json');
   req.send(JSON.stringify(obj));
 
-/*
   // side effect of pushing timeline pin: also update appGlance
+  setSlice(obj);
+}
+
+function setSlice(obj) {
   var sliceObj = {
     "layout": {
-      "icon": "app://images/LOGO_TINY",
+      "icon": "app://images/LOGO",
       "subtitleTemplateString": obj.pin.layout.title
     }
   };
-  setSlice(sliceObj);
-*/
-
-}
-
-/*
-function setSlice(obj) {
+  console.log('Setting slice: ' + JSON.stringify(sliceObj));
   if (Pebble.appGlanceReload) {
-    Pebble.appGlanceReload([obj], appGlanceSuccess, appGlanceFailure);
+    Pebble.appGlanceReload([sliceObj], appGlanceSuccess, appGlanceFailure);
   }
 }
 
 function appGlanceSuccess(appGlanceSlices, appGlanceReloadResult) {
-  console.log('appGlance updated!');
+  console.log(appGlanceSlices.length + ' appGlances updated!');
 }
 
 function appGlanceFailure(appGlanceSlices, appGlanceReloadResult) {
   console.error('appGlance update FAILED!');
+  console.error(JSON.stringify(appGlanceReloadResult));
 }
 
-*/
 function reverseGeocode(coords, callback) {
   // get address
   var url = geocoder + '&username=' + userToken + '&lat=' +
     coords.latitude + '&lng=' + coords.longitude;
   var rgc = new XMLHttpRequest(); // xhr for reverse geocoding, only one instance!
   rgc.open("get", url, true);
-  rgc.setRequestHeader('User-Agent', 'Get Back in Time/3.21/' + userToken);
+  // rgc.setRequestHeader('User-Agent', 'Get Back in Time/3.21/' + userToken);
   rgc.onerror = rgc.ontimeout = function(e) {
     console.warn("Reverse geocoding error: " + this.statusText);
   };
@@ -450,6 +447,7 @@ function parseServerResponse() {
      obj.position.coords.longitude);
   */
   storeLocation(obj.position);
+  setSlice(obj);
 }
 
 function getHistoryFromServer() {

@@ -1,5 +1,5 @@
 {
-    "author": "Samuel Rinnetm\u00e4ki",
+    "author": "Samuel Rinnetmäki",
     "dependencies": {},
     "keywords": [
         "pebble-app"
@@ -50,6 +50,18 @@
                     "name": "LOGO_LARGE",
                     "type": "png"
                 }
+            ],
+            "publishedMedia": [
+                {
+                    "name": "LOGO",
+                    "id": 1,
+                    "glance": "LOGO_TINY",
+                    "timeline": {
+                        "tiny": "LOGO_TINY",
+                        "small": "LOGO_SMALL",
+                        "large": "LOGO_LARGE"
+                    }
+                }
             ]
         },
         "sdkVersion": "3",
@@ -64,5 +76,5 @@
             "watchface": false
         }
     },
-    "version": "3.20.0"
+    "version": "3.23.0"
 }

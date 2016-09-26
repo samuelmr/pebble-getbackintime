@@ -29,9 +29,6 @@ static int16_t speed = 0;
 static int16_t accuracy = 0;
 static int16_t orientation = 0;
 static int16_t history_count = 0;
-// update screen only when heading changes at least <sensitivity> degrees
-// this is overridden by settings
-static int sensitivity = 1;
 static const bool animated = true;
 static bool initialized = false;
 static time_t location_updated;
@@ -66,13 +63,16 @@ static const int UNIT_TRESHOLD = 2999;
 static const int FRACTION_TRESHOLD = 100;
 static AppTimer *current_timer;
 static MenuLayer *menu_layer;
-
 static GColor approaching;
 static GColor receding;
 // static GColor bg;
 static int max_radius;
 
 #ifdef PBL_COMPASS
+// update screen only when heading changes at least <sensitivity> degrees
+// this is overridden by settings
+static int sensitivity = 1;
+static bool leveled = false;
 enum compass_states {
   CALIBRATING = 0,
   FINETUNING = 1,
@@ -80,8 +80,6 @@ enum compass_states {
 };
 static int compass_state = CALIBRATING;
 #endif
-
-static void click_config_provider(void *context);
 
 #define STR_MAX_LEN 30
 typedef struct{
@@ -140,12 +138,27 @@ GColor get_bar_color(int val) {
 #endif
 }
 
+#ifdef PBL_COMPASS
+#ifndef PBL_PLATFORM_APLITE
+static void accel_data_handler(AccelData *data, uint32_t num_samples) {
+  int16_t x = data[0].x;
+  int16_t y = data[0].y;
+  // int16_t z = data[0].z;
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "x: %d, y: %d, z: %d", x, y, z);
+  leveled = ((y > -175) && (y < 175) && (x > -175) && (x < 175));
+}
+#endif
+#endif
+
+static void click_config_provider(void *context);
+
 static void reset_dist_bg(void *data) {
   text_layer_set_background_color(dist_layer, GColorClear);
+  current_timer = NULL;
 }
 
 static void show_hint(int index) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing hint");
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing hint");
   // APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing hint: %d", index);
   if (!initialized) {
     text_layer_set_text(hint_layer, "Loading data...");
@@ -166,7 +179,7 @@ static void show_hint(int index) {
 }
 
 static void prev_hint_handler(ClickRecognizerRef recognizer, void *context) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing prev hint");
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing prev hint");
   current_hint--;
   if (current_hint < 0) {
     current_hint = MAX_HINT_COUNT - 1;
@@ -180,7 +193,7 @@ static void prev_hint_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void next_hint_handler(ClickRecognizerRef recognizer, void *context) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing next hint");
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Showing next hint");
   ++current_hint;
   if (current_hint >= MAX_HINT_COUNT) {
     current_hint = 0;
@@ -195,7 +208,7 @@ static void next_hint_handler(ClickRecognizerRef recognizer, void *context) {
 
 #ifdef PBL_COMPASS
 void compass_heading_handler(CompassHeadingData heading_data){
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Compass heading updated");
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Compass heading updated");
   switch (heading_data.compass_status) {
     case CompassStatusDataInvalid:
       compass_state = CALIBRATING;
@@ -238,7 +251,7 @@ void compass_heading_handler(CompassHeadingData heading_data){
 #endif
 
 static void info_layer_update_callback(Layer *layer, GContext *ctx) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Updating info layer");
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updating info layer");
   if(!bluetooth_connection_service_peek()) {
     text_layer_set_text(track_layer, "!");
     text_layer_set_text(speed_layer, "!");
@@ -294,7 +307,7 @@ static void info_layer_update_callback(Layer *layer, GContext *ctx) {
 }
 
 static void head_layer_update_callback(Layer *layer, GContext *ctx) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Updating head layer");
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updating head layer");
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_context_set_stroke_color(ctx, GColorBlack);
   graphics_context_set_stroke_width(ctx, 4);
@@ -330,9 +343,6 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
     int compass_heading = (TRIG_MAX_ANGLE / 360) * (heading - orientation);
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Distance (%ld) more than accuracy (%d) - drawing arrow towards %d (%d)", distance, accuracy, (heading - orientation), compass_heading);
     gpath_rotate_to(head_path, compass_heading);
-    AccelData accel = (AccelData) { .x = 0, .y = 0, .z = 0 };
-    accel_service_peek(&accel);
-    bool leveled = ((accel.y > -150) && (accel.y < 150));
     if ((compass_state == CALIBRATED) && leveled) {
       gpath_draw_filled(ctx, head_path);
     }
@@ -366,7 +376,7 @@ static void head_layer_update_callback(Layer *layer, GContext *ctx) {
 }
 
 static void send_message(const char *cmd, int32_t id) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Sending...");
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Sending...");
   DictionaryIterator *iter;
   app_message_outbox_begin(&iter);
   if (iter == NULL) {
@@ -385,7 +395,7 @@ static void send_message(const char *cmd, int32_t id) {
 }
 
 static void forward_message_to_phone(DictionaryIterator *in) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "forwarding...");
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "forwarding...");
   // The message *in was sent by e.g. the Android app and was meant for the JS app not the watch
   DictionaryIterator *iter;
   app_message_outbox_begin(&iter);
@@ -409,7 +419,7 @@ static void forward_message_to_phone(DictionaryIterator *in) {
 }
 
 static void reset_handler(ClickRecognizerRef recognizer, void *context) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Reset");
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Reset");
   hints[3] = "Resetting target...";
   show_hint(3);
   text_layer_set_text(dist_layer, "0");
@@ -418,7 +428,7 @@ static void reset_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void menu_show_handler(ClickRecognizerRef recognizer, void *context) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Show menu, %d items!", history_count);
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "Show menu, %d items!", history_count);
   window_stack_push(menu_window, animated);
 }
 
@@ -442,7 +452,7 @@ void out_failed_handler(DictionaryIterator *failed, AppMessageResult reason, voi
 }
 
 void in_received_handler(DictionaryIterator *iter, void *context) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "received data");
+  // APP_LOG(APP_LOG_LEVEL_DEBUG, "received data");
   hints[4] = NULL;
   Tuple *count_tuple = dict_find(iter, COUNT_KEY);
   if (count_tuple) {
@@ -496,6 +506,9 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     heading = head_tuple->value->int16;
     // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated heading to %d", heading);
     snprintf(target_text, sizeof(target_text), "%d°", heading);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "target_text %s", target_text);
+    text_layer_set_text(target_layer, target_text);
+
     if (heading < 0) {
       APP_LOG(APP_LOG_LEVEL_WARNING, "Negative heading %d", heading);
       target2_text = "N";
@@ -524,11 +537,11 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     else if (heading < 337.5) {
       target2_text = "NW";
     }
-    text_layer_set_text(target_layer, target_text);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "target2_text %s", target2_text);
     text_layer_set_text(target2_layer, target2_text);
     layer_mark_dirty(head_layer);
-    layer_mark_dirty(info_layer);
   }
+
   Tuple *units_tuple = dict_find(iter, UNITS_KEY);
   if (units_tuple) {
     strcpy(units, units_tuple->value->cstring);
@@ -610,7 +623,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
       unit = "km";
     }
   }
-  /* decimals of metrs would always be 0 */
+  /* decimals of meters would always be 0 */
   if ((strcmp(unit, "m") != 0) && (dist_times_ten < FRACTION_TRESHOLD)) {
     int whole = (int) (dist_times_ten / 10);
     int fractions = (int) (dist_times_ten % 10);
@@ -622,7 +635,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   // APP_LOG(APP_LOG_LEVEL_DEBUG, "Unit: %s", unit);
 #ifdef PBL_COMPASS
   Tuple *sens_tuple = dict_find(iter, SENS_KEY);
-  if (sens_tuple) {
+  if (sens_tuple && (sensitivity != sens_tuple->value->int8)) {
     sensitivity = sens_tuple->value->int8;
     compass_service_unsubscribe();
     compass_service_set_heading_filter(TRIG_MAX_ANGLE*sensitivity/360);
@@ -724,7 +737,7 @@ static void window_load(Window *window) {
   text_layer_set_text_color(target_layer, GColorBlack);
   text_layer_set_background_color(target_layer, GColorClear);
   text_layer_set_text_alignment(target_layer, GTextAlignmentCenter);
-  text_layer_set_text(target_layer, "Please");
+  text_layer_set_text(target_layer, "please");
   layer_add_child(window_layer, text_layer_get_layer(target_layer));
 
   target2_layer = text_layer_create(GRect(bounds.size.w-PBL_IF_RECT_ELSE(48, 62), 32, 48, 35));
@@ -818,9 +831,7 @@ static void window_unload(Window *window) {
   text_layer_destroy(acc_layer);
   text_layer_destroy(acc_label_layer);
   text_layer_destroy(calib_hint_layer);
-  if (hint_layer) {
-    text_layer_destroy(hint_layer);
-  }
+  text_layer_destroy(hint_layer);
 }
 
 static void menu_window_load(Window *window) {
@@ -865,20 +876,23 @@ static void init(void) {
 #ifdef PBL_COMPASS
   compass_service_set_heading_filter(TRIG_MAX_ANGLE*sensitivity/360);
   compass_service_subscribe(&compass_heading_handler);
+#ifndef PBL_PLATFORM_APLITE
+  accel_service_set_sampling_rate(ACCEL_SAMPLING_10HZ);
+  accel_data_service_subscribe(1, accel_data_handler);
+#endif
 #endif
   app_message_register_inbox_received(in_received_handler);
   app_message_register_inbox_dropped(in_dropped_handler);
   app_message_register_outbox_sent(out_sent_handler);
   app_message_register_outbox_failed(out_failed_handler);
-  const uint32_t inbound_size = APP_MESSAGE_INBOX_SIZE_MINIMUM;
-  const uint32_t outbound_size = APP_MESSAGE_OUTBOX_SIZE_MINIMUM;
+  // const uint32_t inbound_size = APP_MESSAGE_INBOX_SIZE_MINIMUM;
+  // const uint32_t outbound_size = APP_MESSAGE_OUTBOX_SIZE_MINIMUM;
+  const uint32_t inbound_size = 1024;
+  const uint32_t outbound_size = 1024;
   app_message_open(inbound_size, outbound_size);
 
   window = window_create();
   window_set_click_config_provider(window, click_config_provider);
-#ifndef PBL_SDK_3
-  window_set_fullscreen(window, true);
-#endif
   window_set_window_handlers(window, (WindowHandlers) {
     .load = window_load,
     .unload = window_unload,
@@ -896,6 +910,9 @@ static void init(void) {
 static void deinit(void) {
 #ifdef PBL_COMPASS
   compass_service_unsubscribe();
+#ifndef PBL_PLATFORM_APLITE
+  accel_data_service_unsubscribe();
+#endif
 #endif
   send_message(quit_cmd, -1);
   window_destroy(window);
