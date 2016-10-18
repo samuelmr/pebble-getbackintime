@@ -20,7 +20,7 @@ var R = 6371000; // m
 var locationWatcher;
 var locationInterval;
 var locationOptions = {timeout: 15000, maximumAge: 1000, enableHighAccuracy: true };
-var serverAddress = 'http://getback.timelinepush.com/';
+var serverAddress = 'https://getback.timelinepush.com/';
 // var geocoder = 'http://nominatim.openstreetmap.org/reverse?format=json&zoom=18';
 // var geocoder = 'http://api.geonames.org/findNearestAddressJSON?formatted=false&style=full';
 var geocoder = 'http://services.gisgraphy.com/street/search?format=json&from=0&to=1';
@@ -64,7 +64,7 @@ Pebble.addEventListener("ready", function(e) {
   sendNextMessage();
   getHistoryFromServer();
   initialized = true;
-  // console.log("JavaScript app ready and running!");
+  console.log("JavaScript app ready and running!");
 });
 
 Pebble.addEventListener("appmessage",
@@ -266,25 +266,28 @@ function setTimelinePin(coords, placeName, body) {
   req.open("post", url, true);
   req.setRequestHeader('Content-Type', 'application/json');
   req.send(JSON.stringify(obj));
-  // kind of a side effect...
-  addAppGlanceSlice(obj);
+  // side effect of pushing timeline pin: also update appGlance
+  setSlice(obj);
 }
 
-function addAppGlanceSlice(obj) {
-  // Construct the app glance slice object
-  var appGlanceSlices = [{
+function setSlice(obj) {
+  var sliceObj = {
     "layout": {
-      "icon": "app://images/LOGO_TINY",
+      "icon": "app://images/LOGO",
       "subtitleTemplateString": obj.pin.layout.title
     }
   }];
   // Trigger a reload of the slices in the app glance
-  Pebble.appGlanceReload(appGlanceSlices, appGlanceSuccess, appGlanceFailure);
+  if (Pebble.appGlanceReload) {
+    console.log('Setting slice: ' + JSON.stringify(sliceObj));
+    Pebble.appGlanceReload([sliceObj], appGlanceSuccess, appGlanceFailure);
+  }
 }
 
 function appGlanceSuccess(appGlanceSlices, appGlanceReloadResult) {
-  console.log('App glance creation OK!');
-};
+  var count = appGlanceSlices.length || 0;
+  console.log(count + ' appGlances updated!');
+}
 
 function appGlanceFailure(appGlanceSlices, appGlanceReloadResult) {
   console.error('App glance creation FAILED: ' + JSON.stringify(appGlanceReloadResult));
@@ -452,6 +455,7 @@ function parseServerResponse() {
      obj.position.coords.longitude);
   */
   storeLocation(obj.position);
+  setSlice(obj);
 }
 
 function getHistoryFromServer() {

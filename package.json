@@ -52,16 +52,16 @@
                 }
             ],
             "publishedMedia": [
-              {
-                "id": 2,
-                "name": "LOGO",
-                "glance": "LOGO_TINY",
-                "timeline": {
-                  "tiny": "LOGO_TINY",
-                  "small": "LOGO_SMALL",
-                  "large": "LOGO_LARGE"
+                {
+                    "name": "LOGO",
+                    "id": 1,
+                    "glance": "LOGO_TINY",
+                    "timeline": {
+                        "tiny": "LOGO_TINY",
+                        "small": "LOGO_SMALL",
+                        "large": "LOGO_LARGE"
+                    }
                 }
-              }
             ]
         },
         "sdkVersion": "3",
