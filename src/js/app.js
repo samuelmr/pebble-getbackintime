@@ -207,7 +207,7 @@ function appMessageNack(e) {
     errorCount++;
     // console.log("Retrying, " + errorCount);
   }
-  console.warn('Message rejected by Pebble! ' + e.error + ' (' + messageQueue.length + ' messages waiting!)');
+  console.warn('Message rejected by Pebble! ' + JSON.stringify(e) + ' (' + messageQueue.length + ' messages waiting!)');
   sendNextMessage();
 }
 
