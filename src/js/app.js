@@ -276,7 +276,7 @@ function setSlice(obj) {
       "icon": "app://images/LOGO",
       "subtitleTemplateString": obj.pin.layout.title
     }
-  }];
+  };
   // Trigger a reload of the slices in the app glance
   if (Pebble.appGlanceReload) {
     console.log('Setting slice: ' + JSON.stringify(sliceObj));
