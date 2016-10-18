@@ -29,6 +29,11 @@ static int16_t speed = 0;
 static int16_t accuracy = 0;
 static int16_t orientation = 0;
 static int16_t history_count = 0;
+#ifdef PBL_COMPASS
+// update screen only when heading changes at least <sensitivity> degrees
+// this is overridden by settings
+static int sensitivity = 1;
+#endif
 static const bool animated = true;
 static bool initialized = false;
 static time_t location_updated;
@@ -36,7 +41,9 @@ static const uint32_t CMD_KEY = 1;
 static const uint32_t HEAD_KEY = 2;
 static const uint32_t DIST_KEY = 3;
 static const uint32_t UNITS_KEY = 4;
+#ifdef PBL_COMPASS
 static const uint32_t SENS_KEY = 5;
+#endif
 static const uint32_t ID_KEY = 6;
 static const uint32_t SPEED_KEY = 7;
 static const uint32_t ACCURACY_KEY = 8;
@@ -139,7 +146,6 @@ GColor get_bar_color(int val) {
 }
 
 #ifdef PBL_COMPASS
-#ifndef PBL_PLATFORM_APLITE
 static void accel_data_handler(AccelData *data, uint32_t num_samples) {
   int16_t x = data[0].x;
   int16_t y = data[0].y;
@@ -148,13 +154,15 @@ static void accel_data_handler(AccelData *data, uint32_t num_samples) {
   leveled = ((y > -175) && (y < 175) && (x > -175) && (x < 175));
 }
 #endif
-#endif
 
 static void click_config_provider(void *context);
 
 static void reset_dist_bg(void *data) {
   text_layer_set_background_color(dist_layer, GColorClear);
-  current_timer = NULL;
+  if (current_timer) {
+    app_timer_cancel(current_timer);
+    current_timer = NULL;
+  }
 }
 
 static void show_hint(int index) {
@@ -456,30 +464,35 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   hints[4] = NULL;
   Tuple *count_tuple = dict_find(iter, COUNT_KEY);
   if (count_tuple) {
-    history_count = count_tuple->value->int8;
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Found %d places in history", history_count);
-    if (history_count > MAX_PLACE_COUNT) {
-      history_count = MAX_PLACE_COUNT;
-    }
+    int count_value = count_tuple->value->int8;
     Tuple *index_tuple = dict_find(iter, INDEX_KEY);
     int place_index = index_tuple->value->int8;
-    Place *place = &places[place_index];
-    Tuple *id_tuple = dict_find(iter, ID_KEY);
-    place->id = id_tuple->value->uint32;
-	  //FIXME: This may cause crash with Unicode strings - use @bcaller/pebble_unicode in future
-    Tuple *title_tuple = dict_find(iter, TITLE_KEY);
-    strncpy(place->title, title_tuple->value->cstring, STR_MAX_LEN-1);
-    Tuple *subtitle_tuple = dict_find(iter, SUBTITLE_KEY);
-    strncpy(place->subtitle, subtitle_tuple->value->cstring, STR_MAX_LEN-1);
-    if (menu_layer) {
-      layer_mark_dirty(menu_layer_get_layer(menu_layer));
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Found history place %d/%d", place_index, count_value);
+    if (place_index < MAX_PLACE_COUNT) {
+      history_count = count_value;
+      if (history_count > MAX_PLACE_COUNT) {
+        history_count = MAX_PLACE_COUNT;
+      }
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Adding place %d to menu", place_index);
+      Place *place = &places[place_index];
+      Tuple *id_tuple = dict_find(iter, ID_KEY);
+      place->id = id_tuple->value->uint32;
+      //FIXME: This may cause crash with Unicode strings - use @bcaller/pebble_unicode in future
+      Tuple *title_tuple = dict_find(iter, TITLE_KEY);
+      strncpy(place->title, title_tuple->value->cstring, STR_MAX_LEN-1);
+      Tuple *subtitle_tuple = dict_find(iter, SUBTITLE_KEY);
+      strncpy(place->subtitle, subtitle_tuple->value->cstring, STR_MAX_LEN-1);
+      if (menu_layer) {
+        // layer_mark_dirty(menu_layer_get_layer(menu_layer));
+      }
+      // APP_LOG(APP_LOG_LEVEL_DEBUG, "Found place %ld (%d): %s/%s", place->id, place_index, place->title, place->subtitle);
+      hints[0] = "SELECT for history menu";
     }
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Found place %ld (%d): %s/%s", place->id, place_index, place->title, place->subtitle);
-    hints[0] = "SELECT for history menu";
   }
 
   Tuple *tuple_for_phone = dict_find(iter, CMD_KEY);
   if (tuple_for_phone) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Forwarding...");
 	  // This was sent by e.g. the Android app and was meant for the JS app not the watch
 	  forward_message_to_phone(iter);
   }
@@ -487,6 +500,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
   Tuple *id_tuple = dict_find(iter, ID_KEY);
   if (id_tuple) {
     int32_t idval = id_tuple->value->int32;
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Found ID: %ld", idval);
     if ((idval < 0) && (launch_reason() == APP_LAUNCH_TIMELINE_ACTION)) {
       uint32_t id = launch_get_args();
       // APP_LOG(APP_LOG_LEVEL_DEBUG, "Launched from timeline, pin ID: %ld", id);
@@ -565,7 +579,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
     static char acc_text[6];
     snprintf(acc_text, sizeof(acc_text), "%d", show_acc);
     text_layer_set_text(acc_layer, acc_text);
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated accuracy to %d %s (%d)", show_acc, acc_unit, accuracy);
+    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated accuracy to %s", acc_text);
   }
   Tuple *speed_tuple = dict_find(iter, SPEED_KEY);
   if (speed_tuple) {
@@ -595,7 +609,7 @@ void in_received_handler(DictionaryIterator *iter, void *context) {
       reset_dist_bg(NULL);
     }
     distance = dist_tuple->value->int32;
-    // APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated distance to %d", (int) distance);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Updated distance to %d", (int) distance);
   }
   int32_t dist_times_ten = 10 * distance;
   if (strcmp(units, "imperial") == 0) {
@@ -855,7 +869,6 @@ static void menu_window_unload(Window *window) {
   menu_layer_destroy(menu_layer);
 }
 
-
 static void init(void) {
   initialized = false;
   hints[0] = "Loading history...";
@@ -911,9 +924,7 @@ static void init(void) {
 static void deinit(void) {
 #ifdef PBL_COMPASS
   compass_service_unsubscribe();
-#ifndef PBL_PLATFORM_APLITE
   accel_data_service_unsubscribe();
-#endif
 #endif
   send_message(quit_cmd, -1);
   window_destroy(window);
