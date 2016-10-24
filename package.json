@@ -1,5 +1,5 @@
 {
-    "author": "Samuel Rinnetm\u00e4ki",
+    "author": "Samuel Rinnetmäki",
     "dependencies": {},
     "keywords": [
         "pebble-app"
@@ -50,6 +50,18 @@
                     "name": "LOGO_LARGE",
                     "type": "png"
                 }
+            ],
+            "publishedMedia": [
+                {
+                    "name": "LOGO",
+                    "id": 1,
+                    "glance": "LOGO_TINY",
+                    "timeline": {
+                        "tiny": "LOGO_TINY",
+                        "small": "LOGO_SMALL",
+                        "large": "LOGO_LARGE"
+                    }
+                }
             ]
         },
         "sdkVersion": "3",
@@ -62,8 +74,11 @@
         ],
         "uuid": "6f983a89-f645-4a11-aefd-3b84dd8946f0",
         "watchapp": {
+            "onlyShownOnCommunication": false,
+            "hiddenApp": false,
             "watchface": false
         }
     },
+    "private": true,
     "version": "3.24.0"
 }
