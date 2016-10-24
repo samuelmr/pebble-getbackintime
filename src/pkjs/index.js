@@ -29,7 +29,7 @@ var errorCount = 0;
 var processing = 0;
 var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-console.log('Initial values: lat2: ' + lat2 + ', lon2: ' + lon2 + ', interval:' + interval + ', units: ' + units + ', userToken: ' + userToken);
+// console.log('Initial values: lat2: ' + lat2 + ', lon2: ' + lon2 + ', interval:' + interval + ', units: ' + units + ', userToken: ' + userToken);
 
 Pebble.addEventListener("ready", function(e) {
   console.log('JS ready');
@@ -544,7 +544,6 @@ function startWatcher() {
     locationWatcher = navigator.geolocation.watchPosition(locationSuccess, locationError, locationOptions);
     // console.log("Started location watcher: " + locationWatcher);
   }
-  /*
   // for testing: randomize movement!
   window.navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
   if (!interval) {
@@ -560,6 +559,7 @@ function startWatcher() {
     calculate();
   }, interval * 1000);
   console.log("Started fake location watcher: " + locationWatcher);
+  /*
   */
 }
 function toRad(num) {
