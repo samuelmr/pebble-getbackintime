@@ -545,6 +545,7 @@ function startWatcher() {
     // console.log("Started location watcher: " + locationWatcher);
   }
   // for testing: randomize movement!
+  /*
   window.navigator.geolocation.getCurrentPosition(locationSuccess, locationError, locationOptions);
   if (!interval) {
     interval = 10;
@@ -559,7 +560,6 @@ function startWatcher() {
     calculate();
   }, interval * 1000);
   console.log("Started fake location watcher: " + locationWatcher);
-  /*
   */
 }
 function toRad(num) {
