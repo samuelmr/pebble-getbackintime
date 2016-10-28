@@ -38,17 +38,17 @@
                     "file": "images/icon25.png",
                     "menuIcon": true,
                     "name": "LOGO_TINY",
-                    "type": "png"
+                    "type": "bitmap"
                 },
                 {
                     "file": "images/icon50.png",
                     "name": "LOGO_SMALL",
-                    "type": "png"
+                    "type": "bitmap"
                 },
                 {
                     "file": "images/icon80.png",
                     "name": "LOGO_LARGE",
-                    "type": "png"
+                    "type": "bitmap"
                 }
             ],
             "publishedMedia": [
@@ -80,5 +80,5 @@
         }
     },
     "private": true,
-    "version": "3.24.0"
+    "version": "3.25.0"
 }

@@ -239,9 +239,7 @@ function setTimelinePin(coords, placeName, body) {
       "time": new Date().toISOString(),
       "layout": {
         "type": "genericPin",
-        "tinyIcon": "app://images/LOGO_TINY",
-        "smallIcon": "app://images/LOGO_SMALL",
-        "largeIcon": "app://images/LOGO_LARGE",
+        "tinyIcon": "app://images/LOGO",
         "title": placeName || latlon,
         "subtitle": "Get Back in Time",
         "body": body || "Set from watch."
